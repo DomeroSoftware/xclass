@@ -1,0 +1,521 @@
+=head1 NAME
+
+aclass - Advanced Array Manipulation Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The aclass module provides a robust and feature-rich interface for working with
+array references within the xclass ecosystem. It offers thread-safe operations,
+extensive utility methods, and seamless integration with other xclass components.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe array operations using lclass synchronization
+
+=item * Overloaded operators for intuitive array manipulation
+
+=item * Extensive set of utility methods for array operations
+
+=item * Element-wise type handling using xclass
+
+=item * Support for functional programming paradigms (map, grep, reduce)
+
+=item * Advanced operations like slicing, atomic updates, and compare-and-swap
+
+=item * Iterators for efficient traversal
+
+=item * Integration with xclass event system for operation tracking
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+aclass inherits core functionality from lclass and can be instantiated directly
+or through xclass factory methods. It implements the xclass event system for
+operation tracking and uses xclass for element-wise type handling.
+
+=head2 Thread Safety
+
+All methods in aclass are designed to be thread-safe when used with shared arrays,
+utilizing lclass synchronization mechanisms.
+
+=head2 Performance Considerations
+
+aclass is optimized for both single-threaded and multi-threaded environments.
+It uses lazy initialization of element handlers and efficient locking strategies.
+
+=head2 Extensibility
+
+The class is designed to be easily extended with additional methods and
+supports custom event triggers for all operations.
+
+=head2 Handling of Circular References
+
+aclass provides robust handling of circular references within array structures. As part of the xclass ecosystem, it leverages the built-in circular reference management capabilities.
+
+- Arrays can contain references to other aclass objects or to objects of other xclass types without causing issues.
+- Circular references within nested array structures are automatically detected and managed.
+- The garbage collection process correctly handles aclass objects involved in circular references, preventing memory leaks.
+- Users can freely create complex, self-referential data structures using aclass without manual intervention.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use aclass;
+
+    # Create a new aclass object
+    my $array = aclass->new([1, 2, 3, 4, 5]);
+
+    # Basic operations
+    $array->push(6)->unshift(0);
+    print $array->join(', ');  # Prints: 0, 1, 2, 3, 4, 5, 6
+
+    # Functional operations
+    $array->map(sub { $_ * 2 })->grep(sub { $_ > 5 });
+    print $array->join(', ');  # Prints: 6, 8, 10, 12
+
+    # Advanced operations
+    my $sum = $array->reduce(sub { $a + $b });
+    print "Sum: $sum";  # Prints: Sum: 36
+
+    # Overloaded operators
+    my $a = aclass->new([1, 2, 3]);
+    my $b = aclass->new([4, 5, 6]);
+    my $c = $a + $b;
+    print $c->join(', ');  # Prints: 1, 2, 3, 4, 5, 6
+
+    # Atomic operations
+    $array->compare_and_swap(0, 6, 7);
+    $array->atomic_update(1, sub { $_ * 3 });
+
+    # Iteration
+    my $iter = $array->iterator();
+    while (my $elem = $iter->()) {
+        print "$elem ";
+    }
+
+=head1 EXAMPLES
+
+=head2 Data Processing Pipeline
+
+    use aclass;
+    use List::Util qw(sum);
+
+    my $readings = aclass->new([23.1, 22.8, 24.3, 23.9, 22.5, 24.1]);
+
+    my $result = $readings
+        ->map(sub { $_ * 1.8 + 32 })  # Convert Celsius to Fahrenheit
+        ->grep(sub { $_ > 75 })       # Filter readings above 75°F
+        ->map(sub { sprintf "%.1f°F", $_ });  # Format for display
+
+    print "High temperature readings: " . $result->join(", ") . "\n";
+
+    my $avg = $readings->reduce(sub { $a + $b }) / $readings->len;
+    printf "Average temperature: %.1f°C\n", $avg;
+
+=head2 Custom Sorting and Filtering
+
+    use aclass;
+
+    my $people = aclass->new([
+        { name => "Alice", age => 30 },
+        { name => "Bob", age => 25 },
+        { name => "Charlie", age => 35 },
+        { name => "David", age => 28 },
+    ]);
+
+    # Sort people by age
+    $people->sort(sub { $a->{age} <=> $b->{age} });
+
+    # Filter people over 30
+    my $over_30 = $people->grep(sub { $_->{age} > 30 });
+
+    # Map to just names
+    my $names = $people->map(sub { $_->{name} });
+
+    print "All names: " . $names->join(", ") . "\n";
+    print "People over 30: " . $over_30->map(sub { $_->{name} })->join(", ") . "\n";
+
+=head2 Dynamic Array Manipulation
+
+    use aclass;
+
+    my $dynamic_array = aclass->new([1, 2, 3, 4, 5]);
+
+    # Remove even numbers and double odd numbers
+    $dynamic_array->foreach(sub {
+        if ($_ % 2 == 0) {
+            $dynamic_array->splice($dynamic_array->first(sub { $_ == $_ }), 1);
+        } else {
+            $dynamic_array->set($dynamic_array->first(sub { $_ == $_ }), $_ * 2);
+        }
+    });
+
+    print "Modified array: " . $dynamic_array->join(", ") . "\n";
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($ref?, %options)
+
+Creates a new aclass object.
+
+    my $array = aclass->new([1, 2, 3]);
+
+=head2 Core Methods
+
+=head3 get($index?)
+
+Retrieves element(s) from the array.
+
+    my $elem = $array->get(0);
+    my @all = $array->get();
+
+=head3 set($index, $value)
+
+Sets an element in the array.
+
+    $array->set(0, 10);
+
+=head3 push(@values)
+
+Pushes elements to the end of the array.
+
+    $array->push(4, 5, 6);
+
+=head3 pop()
+
+Pops an element from the end of the array.
+
+    my $last = $array->pop();
+
+=head3 shift()
+
+Shifts an element from the beginning of the array.
+
+    my $first = $array->shift();
+
+=head3 unshift(@values)
+
+Unshifts elements to the beginning of the array.
+
+    $array->unshift(-1, 0);
+
+=head3 len()
+
+Returns the length of the array.
+
+    my $length = $array->len();
+
+=head3 sort($body?)
+
+Sorts the array.
+
+    $array->sort(sub { $a <=> $b });
+
+=head3 reverse()
+
+Reverses the array.
+
+    $array->reverse();
+
+=head3 splice($offset, $length?, @list)
+
+Splices the array.
+
+    my @removed = $array->splice(1, 2, 'a', 'b');
+
+=head3 join($delimiter)
+
+Joins array elements into a string.
+
+    my $str = $array->join(', ');
+
+=head3 clear()
+
+Clears the array.
+
+    $array->clear();
+
+=head2 Functional Methods
+
+=head3 map($coderef)
+
+Applies a function to each element.
+
+    $array->map(sub { $_ * 2 });
+
+=head3 grep($coderef)
+
+Filters elements based on a condition.
+
+    $array->grep(sub { $_ > 5 });
+
+=head3 reduce($coderef)
+
+Reduces the array to a single value.
+
+    my $sum = $array->reduce(sub { $a + $b });
+
+=head3 foreach($coderef)
+
+Iterates over array elements.
+
+    $array->foreach(sub { print "$_ " });
+
+=head3 first($coderef)
+
+Finds the first element matching a condition.
+
+    my $first_even = $array->first(sub { $_ % 2 == 0 });
+
+=head3 last($coderef)
+
+Finds the last element matching a condition.
+
+    my $last_odd = $array->last(sub { $_ % 2 != 0 });
+
+=head2 Mathematical Methods
+
+=head3 sum()
+
+Calculates the sum of array elements.
+
+    my $sum = $array->sum();
+
+=head3 min()
+
+Finds the minimum value in the array.
+
+    my $min = $array->min();
+
+=head3 max()
+
+Finds the maximum value in the array.
+
+    my $max = $array->max();
+
+=head2 Advanced Methods
+
+=head3 unique()
+
+Removes duplicate elements from the array.
+
+    $array->unique();
+
+=head3 slice($start, $end)
+
+Gets a slice of the array.
+
+    my $slice = $array->slice(1, 3);
+
+=head3 compare_and_swap($index, $old_value, $new_value)
+
+Performs a compare-and-swap operation.
+
+    my $success = $array->compare_and_swap(0, 1, 10);
+
+=head3 atomic_update($index, $coderef)
+
+Performs an atomic update on an element.
+
+    $array->atomic_update(0, sub { $_ * 2 });
+
+=head3 iterator()
+
+Creates an iterator for the array.
+
+    my $iter = $array->iterator();
+    while (my $elem = $iter->()) {
+        print "$elem ";
+    }
+
+=head1 OVERLOADED OPERATORS
+
+aclass overloads the following operators for intuitive array manipulation:
+
+=over 4
+
+=item * Dereferencing (@{}, ${}, %{})
+
+=item * Stringification ("")
+
+=item * Numification (0+)
+
+=item * Boolean context
+
+=item * Negation (!)
+
+=item * Assignment (=)
+
+=item * Equality (==, !=)
+
+=item * Comparison (cmp, <=>)
+
+=item * Arithmetic (+, -)
+
+=item * Multiplication (*)
+
+=item * Bitwise (&, |, ^, ~)
+
+=item * String operations (x)
+
+=item * Append (.=)
+
+=item * Left shift (<<)
+
+=item * Right shift (>>)
+
+=back
+
+Examples of overloaded operator usage:
+
+    my $a = aclass->new([1, 2, 3]);
+    my $b = aclass->new([4, 5, 6]);
+
+    # Addition
+    my $c = $a + $b;  # [1, 2, 3, 4, 5, 6]
+
+    # Multiplication
+    my $d = $a * 2;   # [1, 2, 3, 1, 2, 3]
+
+    # Stringification
+    print "$a";       # "1,2,3"
+
+    # Boolean context
+    if ($a) {
+        print "Array is not empty";
+    }
+
+=head1 ERROR HANDLING
+
+aclass uses the error handling mechanisms provided by lclass. The following error codes may be thrown:
+
+=over 4
+
+=item * ACLASS_INDEX_ERROR: Thrown when an invalid index is accessed.
+
+=item * ACLASS_TYPE_ERROR: Thrown when there's a type mismatch in element-wise operations.
+
+=item * ACLASS_EMPTY_ARRAY_ERROR: Thrown when attempting operations on an empty array.
+
+=item * ACLASS_INVALID_ARGUMENT: Thrown when invalid arguments are passed to methods.
+
+=item * ACLASS_SLICE_ERROR: Thrown when an invalid slice range is specified.
+
+=back
+
+Errors can be caught and handled using eval blocks or try-catch constructs if you're using a module like Try::Tiny.
+
+=head1 LIMITATIONS AND CAVEATS
+
+[This section will be filled with known limitations or caveats of using aclass as they are discovered during development and usage.]
+
+=head1 CONFIGURATION
+
+aclass inherits its configuration options from lclass. Refer to the lclass documentation for configuration options.
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Lazy Initialization: Element handlers are initialized on-demand to minimize overhead.
+
+=item * Efficient Locking: Fine-grained locking is used to maximize concurrency in multi-threaded environments.
+
+=item * Overloaded Operators: While convenient, overloaded operators may introduce slight performance overhead compared to direct method calls.
+
+=item * Large Arrays: Performance may degrade with very large arrays due to the overhead of maintaining element handlers.
+
+=back
+
+=head1 THREAD SAFETY
+
+aclass is designed to be thread-safe when used with shared arrays. All public methods use lclass synchronization mechanisms to ensure safe concurrent access and modification of the underlying array.
+
+=head1 COMPATIBILITY
+
+aclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance. It has been developed and tested primarily on Unix-like systems (Linux, macOS) and Windows.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * Scalar::Util
+
+=item * List::Util
+
+=item * lclass (for utility methods and thread-safe operations)
+
+=item * xclass (for handling specific reference types)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to aclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<lclass>, L<xclass>, L<sclass>, L<hclass>, L<cclass>, L<iclass>, L<gclass>, L<rclass>, L<tclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

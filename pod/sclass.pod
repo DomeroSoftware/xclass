@@ -1,0 +1,545 @@
+=head1 NAME
+
+sclass - Advanced Scalar Manipulation Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The sclass module provides a robust and feature-rich interface for working with
+scalar references within the xclass ecosystem. It offers thread-safe operations,
+extensive utility methods, and seamless integration with other xclass components.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe scalar operations using lclass synchronization
+
+=item * Overloaded operators for intuitive scalar manipulation
+
+=item * Extensive set of utility methods for string and numeric operations
+
+=item * JSON serialization and deserialization
+
+=item * Regular expression operations (match, substitute)
+
+=item * String manipulation (trim, pad, case conversion)
+
+=item * Numeric operations (increment, decrement, arithmetic)
+
+=item * Bitwise operations
+
+=item * Atomic operations (fetch_add, fetch_store, test_set)
+
+=item * Encryption and hashing methods (base64, MD5, SHA256, SHA512, simple XOR cipher)
+
+=item * Cloning and comparison methods
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+sclass inherits core functionality from lclass and can be instantiated directly
+or through xclass factory methods. It is registered with the xclass ecosystem
+for seamless integration.
+
+=head2 Thread Safety
+
+All methods are designed to be thread-safe when used with shared scalars,
+utilizing lclass synchronization mechanisms.
+
+=head2 Performance Considerations
+
+sclass is optimized for both single-threaded and multi-threaded environments
+and uses lazy loading of heavy dependencies (e.g., cryptographic libraries).
+
+=head2 Extensibility
+
+The class is designed to be easily extended with additional methods.
+
+=head2 Handling of Circular References
+
+sclass, as part of the xclass ecosystem, inherits the circular reference handling capabilities of xclass. When scalar values are wrapped in sclass objects, any circular references involving these objects are automatically managed.
+
+- Circular references involving sclass objects are safely handled without causing memory leaks.
+- Users can create complex data structures involving sclass objects without worrying about circular reference issues.
+- The internal implementation ensures that the Perl garbage collector can properly clean up sclass objects involved in circular references.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use sclass;
+
+    # Create a new sclass object
+    my $scalar = sclass->new(\(my $s = "Hello, World!"));
+
+    # Perform operations
+    $scalar->set("New Value");
+    $scalar->uc();
+    $scalar->reverse();
+    print $scalar->get();  # Prints: EULAV WEN
+
+    # Numeric operations
+    my $num = sclass->new(\(my $n = 5));
+    $num->inc(3)->mul(2);
+    print $num->get();  # Prints: 16
+
+    # Advanced operations
+    my $data = sclass->new(\(my $d = "secret"));
+    $data->encrypt("key")->encode_base64();
+    print $data->md5();
+
+    # Overloaded operators
+    my $a = sclass->new(\(my $x = 10));
+    my $b = sclass->new(\(my $y = 5));
+    my $c = $a + $b;
+    print "$c";  # Prints: 15
+
+=head1 EXAMPLES
+
+=head2 Basic Usage
+
+    use strict;
+    use warnings;
+    use xclass;
+
+    # Create a new sclass object
+    my $scalar = Sc(\(my $s = "Hello, World!"));
+
+    # Get and set values
+    print "$scalar";  # Prints: Hello, World!
+    $scalar->set("New Value");
+    print "$scalar";  # Prints: New Value
+
+    # String manipulations
+    $scalar->uc();
+    print $scalar->get();  # Prints: NEW VALUE
+    $scalar->reverse();
+    print $scalar->get();  # Prints: EULAV WEN
+
+=head2 Numeric Operations
+
+    my $num = Sc(\(my $n = 5));
+    $num->inc(3)->mul(2); # $num +=3; $num *= 2;
+    print $num->get();  # Prints: 16
+
+    $num->div(4); # $num /= 4;
+    print $num->get();  # Prints: 4
+
+=head2 Regular Expression Operations
+
+    my $text = Sc(\(my $t = "The quick brown fox"));
+    $text->substitute(qr/quick/, "lazy");
+    print $text->get();  # Prints: The lazy brown fox
+
+    if ($text->match(qr/lazy/)) {
+        print "Match found!";
+    }
+
+=head2 Encryption and Hashing
+
+    my $data = Sc(\(my $d = "secret"));
+    $data->encrypt("key");
+    print $data->get();  # Prints: encrypted data
+
+    $data->decrypt("key");
+    print $data->get();  # Prints: secret
+
+    print $data->md5();  # Prints: MD5 hash of "secret"
+
+=head2 Base64 Encoding/Decoding
+
+    my $base64 = Sc(\(my $b = "Hello, World!"));
+    $base64->encode_base64();
+    print $base64->get();  # Prints: SGVsbG8sIFdvcmxkIQ==
+
+    $base64->decode_base64();
+    print $base64->get();  # Prints: Hello, World!
+
+=head2 JSON Serialization
+
+    my $json = Sc(\(my $j = { key => "value" }));
+    $json->to_json();
+    print $json->get();  # Prints: {"key":"value"}
+
+    $json->from_json('{"new_key":"new_value"}');
+    print $json->get();  # Prints: {"new_key":"new_value"}
+
+=head2 Atomic Operations
+
+    my $atomic = Sc(\(my $a = 10));
+    my $old_value = $atomic->fetch_add(5);
+    print "Old: $old_value, New: ", $atomic->get();  # Prints: Old: 10, New: 15
+
+    $atomic->test_set(20);
+    print $atomic->get();  # Prints: 20
+
+=head2 Using Overloaded Operators
+
+    my $a = Sc(\(my $x = 10));
+    my $b = Sc(\(my $y = 5));
+
+    my $c = $a + $b;
+    print "$c";  # Prints: 15
+
+    $a *= 2;
+    print $a->get();  # Prints: 20
+
+    if ($a > $b) {
+        print "a is greater than b";
+    }
+
+=head2 Error Handling
+
+    my $div = Sc(\(my $d = 10));
+    $div->try(sub {
+        $div->div(0); # $div /= 0;
+    }, 'division_operation');
+
+    if ($div->catch('division_operation')) {
+        print "Division by zero caught!";
+    }
+
+=head2 Thread-Safe Operations
+
+    use threads;
+    use threads::shared;
+
+    my $shared = sclass->new(\(my $s :shared = 0));
+
+    my @threads = map {
+        threads->create(sub {
+            for (1..1000) {
+                $shared->inc(); # $shared ++;
+            }
+        });
+    } 1..5;
+
+    $_->join for @threads;
+
+    print "$shared";  # Prints: 5000
+
+These examples demonstrate the key features and usage patterns of the sclass module, including basic operations, numeric manipulations, regular expressions, encryption, hashing, atomic operations, overloaded operators, error handling, and thread-safe operations.
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($ref, %options)
+
+Creates a new sclass object.
+
+    my $scalar = sclass->new(\(my $value = "Hello"));
+
+=head2 Core Methods
+
+=head3 get()
+
+Retrieves the value of the scalar.
+
+=head3 set($ref)
+
+Sets the value of the scalar.
+
+=head3 modify($code)
+
+Modifies the scalar value using a code block.
+
+=head2 String Operations
+
+=head3 chomp()
+
+Removes the trailing newline from the scalar.
+
+=head3 chop()
+
+Removes the last character from the scalar.
+
+=head3 uc()
+
+Converts the scalar to uppercase.
+
+=head3 lc()
+
+Converts the scalar to lowercase.
+
+=head3 reverse()
+
+Reverses the scalar value.
+
+=head3 trim()
+
+Trims whitespace from the beginning and end of the scalar.
+
+=head3 pad($length, $pad_char = ' ', $pad_left = 1)
+
+Pads the scalar with a specified character.
+
+=head3 sstr(@args)
+
+Returns a substring of the scalar.
+
+=head2 Numeric Operations
+
+=head3 inc($value = 1)
+
+Increments the scalar value.
+
+=head3 dec($value = 1)
+
+Decrements the scalar value.
+
+=head3 mul($value)
+
+Multiplies the scalar value.
+
+=head3 div($value)
+
+Divides the scalar value.
+
+=head2 Type Checking and Conversion
+
+=head3 is_numeric()
+
+Checks if the scalar value is numeric.
+
+=head3 to_number()
+
+Converts the scalar value to a number.
+
+=head3 is_empty()
+
+Checks if the scalar value is empty.
+
+=head3 len()
+
+Returns the length of the scalar value.
+
+=head2 Serialization
+
+=head3 to_json()
+
+Converts the scalar to a JSON string.
+
+=head3 from_json($json_string)
+
+Loads a JSON string into the scalar.
+
+=head2 Regular Expression Operations
+
+=head3 match($regex)
+
+Performs a regular expression match on the scalar.
+
+=head3 substitute($regex, $replacement, $global = 0)
+
+Performs a regular expression substitution on the scalar.
+
+=head2 Advanced Operations
+
+=head3 encrypt($key)
+
+Encrypts the scalar using a simple XOR cipher.
+
+=head3 decrypt($key)
+
+Decrypts the scalar using a simple XOR cipher.
+
+=head3 md5()
+
+Calculates the MD5 hash of the scalar.
+
+=head3 sha256()
+
+Calculates the SHA256 hash of the scalar.
+
+=head3 sha512()
+
+Calculates the SHA512 hash of the scalar.
+
+=head3 encode_base64()
+
+Encodes the scalar to base64.
+
+=head3 decode_base64()
+
+Decodes the scalar from base64.
+
+=head2 Atomic Operations
+
+=head3 fetch_add($value)
+
+Atomically fetches and adds to the scalar.
+
+=head3 fetch_store($new_value)
+
+Atomically fetches and stores a new value.
+
+=head3 test_set($new_value)
+
+Atomically tests and sets a new value.
+
+=head2 Utility Methods
+
+=head3 clone()
+
+Creates a deep copy of the sclass object.
+
+=head3 contains($substring)
+
+Checks if the scalar contains a specific substring.
+
+=head3 replace_all($search, $replace)
+
+Replaces all occurrences of a substring.
+
+=head3 to_bool()
+
+Converts the scalar to a boolean value.
+
+=head3 eq_ignore_case($other)
+
+Performs a case-insensitive comparison.
+
+=head3 count_occurrences($substring)
+
+Counts occurrences of a substring.
+
+=head3 truncate($length, $ellipsis = '...')
+
+Truncates the scalar to a specified length.
+
+=head1 OVERLOADED OPERATORS
+
+sclass overloads the following operators for intuitive scalar manipulation:
+
+=over 4
+
+=item * Stringification ("")
+
+=item * Numification (0+)
+
+=item * Boolean context
+
+=item * Negation (!)
+
+=item * Assignment (=)
+
+=item * Equality (==, !=)
+
+=item * Comparison (cmp, <=>)
+
+=item * Arithmetic (+, -, *, /, %, **)
+
+=item * Bitwise (<<, >>, &, |, ^, ~)
+
+=item * String operations (.=, x)
+
+=item * In-place arithmetic (+=, -=, *=, /=, %=, **=)
+
+=item * Increment and decrement (++, --)
+
+=back
+
+=head1 ERROR HANDLING
+
+sclass uses the error handling mechanisms provided by lclass. Exceptions are thrown using the C<throw> method inherited from lclass. Errors can be caught using the C<try> method:
+
+    $scalar->try(sub {
+        $scalar->div(0);
+    }, 'division_operation');
+
+For more details on error handling, refer to the lclass documentation.
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * The encryption method provided is a simple XOR cipher and should not be used for secure encryption in production environments.
+
+=item * Performance may be impacted in heavily multi-threaded environments due to locking mechanisms.
+
+=item * Some operations may create temporary objects, which could impact memory usage in large-scale applications.
+
+=back
+
+=head1 CONFIGURATION
+
+sclass inherits its configuration options from lclass. Refer to the lclass documentation for details on available configuration options.
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Lazy Loading: Heavy dependencies are loaded on demand.
+
+=item * Overloaded Operators: May introduce slight performance overhead compared to direct method calls.
+
+=item * Thread Safety: Introduces some overhead in multi-threaded environments due to locking mechanisms.
+
+=item * Memory Usage: Each sclass object maintains its own scalar reference.
+
+=back
+
+=head1 THREAD SAFETY
+
+sclass is designed to be thread-safe, leveraging the synchronization mechanisms provided by lclass. All methods, including overloaded operators, are implemented using lclass's synchronization primitives.
+
+To use an sclass object across multiple threads, you need to explicitly share it:
+
+    my $scalar = sclass->new(\(my $value = "Shared Value"))->share();
+
+=head1 COMPATIBILITY
+
+sclass requires Perl version 5.10 or higher. It has been developed and tested primarily on Unix-like systems (Linux, macOS) and Windows.
+
+=head1 SEE ALSO
+
+L<lclass>, L<xclass>, L<aclass>, L<hclass>, L<cclass>, L<iclass>, L<gclass>, L<rclass>, L<tclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

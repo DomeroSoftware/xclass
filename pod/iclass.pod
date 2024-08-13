@@ -1,0 +1,642 @@
+=head1 NAME
+
+iclass - Advanced Thread-Safe IO Operations Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The iclass module provides a robust and feature-rich interface for handling IO
+operations within the xclass ecosystem. It offers thread-safe file and stream
+manipulations, supporting various IO types and advanced features.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe IO operations using xclass synchronization
+
+=item * Support for multiple IO types (files, sockets, pipes, TTY, etc.)
+
+=item * Advanced file operations: reading, writing, seeking, truncating
+
+=item * Compression and encoding support with configurable thresholds
+
+=item * File locking mechanisms for concurrent access control
+
+=item * Atomic operations for data integrity
+
+=item * Temporary file creation and secure file deletion
+
+=item * Integration with other xclass reference types
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+iclass inherits core functionality from xclass and can be instantiated directly
+or through xclass factory methods. It implements the xclass event system for
+operation tracking and seamlessly interacts with other xclass data types.
+
+=head2 Thread Safety
+
+All methods in iclass are designed to be thread-safe, utilizing xclass synchronization mechanisms.
+
+=head2 Performance Considerations
+
+iclass is optimized for both single-threaded and multi-threaded environments.
+It uses configurable compression and flush intervals for fine-tuning performance.
+
+=head2 Extensibility
+
+The class is designed to be easily extended with additional IO operations and
+supports custom event triggers for all operations.
+
+=head2 Handling of Circular References
+
+iclass, as part of the xclass ecosystem, incorporates sophisticated handling of circular references for IO operations.
+
+- IO objects wrapped by iclass can safely be part of complex data structures that include other xclass objects.
+- Circular references involving iclass objects, such as in callback systems or event handlers, are automatically detected and managed.
+- The garbage collection process correctly handles iclass objects involved in circular references, ensuring proper resource cleanup.
+- Users can create intricate IO handling systems with interconnected iclass objects without worrying about manual circular reference management.
+- Any circular references created through shared filehandles or IO redirections are handled transparently.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use xclass;
+
+    # Create a new iclass object
+    my $io = Ic('MyApp', 'FileIO');
+
+    # Open a file for writing
+    $io->open('example.txt', 'w');
+
+    # Write to the file
+    $io->write("Hello, World!");
+
+    # Close the file
+    $io->close();
+
+    # Open a file for reading
+    $io->open('example.txt', 'r');
+
+    # Read from the file
+    my $content;
+    $io->read(\$content, 1024);
+
+    # Close the file
+    $io->close();
+
+=head1 EXAMPLES
+
+=head2 Using Compression
+
+    my $io = Ic('MyApp', 'CompressedIO');
+    $io->open('large_file.txt', 'w');
+    $io->set_compression(6);  # Set compression level
+    $io->write($large_data);
+    $io->close();
+
+=head2 Atomic Operations
+
+    my $io = Ic('MyApp', 'AtomicIO');
+    $io->open('important_data.txt', 'r+');
+    $io->atomic_operation(sub {
+        my $data = $io->getline();
+        $data =~ s/old/new/;
+        $io->seek(0, 0);
+        $io->write($data);
+    });
+    $io->close();
+
+=head2 Secure File Deletion
+
+    my $io = Ic('MyApp', 'SecureIO');
+    $io->open('sensitive_data.txt', 'r+');
+    # ... perform operations ...
+    $io->secure_delete();
+
+=head2 Overloading Examples
+
+=head3 Dereference Overloading
+
+    my $io = Ic('MyApp', 'DerefIO');
+    $io->open('file.txt', 'w');
+    my $fh = *$io;  # Get the underlying filehandle
+    print $fh "Direct write\n";
+
+=head3 Stringification Overloading
+
+    my $io = Ic('MyApp', 'StringIO');
+    $io->open('file.txt', 'w');
+    print "IO object: $io\n";  # Prints the stringified representation
+
+=head3 Numeric Context Overloading
+
+    my $io = Ic('MyApp', 'NumericIO');
+    $io->open('file.txt', 'w');
+    my $fileno = 0 + $io;  # Get the file descriptor number
+
+=head3 Boolean Context Overloading
+
+    my $io = Ic('MyApp', 'BoolIO');
+    if ($io) {
+        print "IO handle is open\n";
+    }
+
+=head3 Negation Overloading
+
+    my $io = Ic('MyApp', 'NegationIO');
+    if (!$io) {
+        print "IO handle is not open\n";
+    }
+
+=head3 Assignment Overloading
+
+    my $io1 = Ic('MyApp', 'AssignIO1');
+    my $io2 = Ic('MyApp', 'AssignIO2');
+    $io2 = $io1;  # Assign $io1 to $io2
+
+=head3 Equality Overloading
+
+    my $io1 = Ic('MyApp', 'EqualityIO1');
+    my $io2 = Ic('MyApp', 'EqualityIO2');
+    if ($io1 == $io2) {
+        print "IO handles are equal\n";
+    }
+
+=head3 Comparison Overloading
+
+    my $io1 = Ic('MyApp', 'CompareIO1');
+    my $io2 = Ic('MyApp', 'CompareIO2');
+    if ($io1 cmp $io2) {
+        print "IO handles are different\n";
+    }
+
+=head2 xclass Integration Examples
+
+=head3 Using xclass Factory Method
+
+    my $io = Ic('MyApp', 'FactoryIO');
+    $io->open('xclass_file.txt', 'w');
+    $io->write("xclass integration example");
+    $io->close();
+
+=head3 Interacting with Other xclass Types
+
+    my $array = Ac(['data1', 'data2']);
+    my $io = Ic('MyApp', 'ArrayIO');
+    $io->open('array_data.txt', 'w');
+    $io->write($array->join("\n"));
+    $io->close();
+
+=head2 lclass Utilization Examples
+
+=head3 Using lclass Synchronization
+
+    my $io = Ic('MyApp', 'SyncIO');
+    $io->sync(sub {
+        $io->open('sync_file.txt', 'w');
+        $io->write("Synchronized write");
+        $io->close();
+    });
+
+=head3 Error Handling with lclass
+
+    my $io = Ic('MyApp', 'ErrorIO');
+    $io->try(sub {
+        $io->open('nonexistent_file.txt', 'r');
+    }, 'open_file');
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($ref, %options)
+
+Creates a new iclass object.
+
+    my $io = iclass->new();
+
+=head2 Core Methods
+
+=head3 open($filename, $mode)
+
+Opens a file with the specified mode.
+
+    $io->open('file.txt', 'w');
+
+=head3 close()
+
+Closes the currently open file.
+
+    $io->close();
+
+=head3 read($buffer, $length, $offset)
+
+Reads data from the file into the buffer.
+
+    my $buffer;
+    $io->read(\$buffer, 1024);
+
+=head3 write($buffer, $length, $offset)
+
+Writes data from the buffer to the file.
+
+    $io->write("Hello, World!");
+
+=head3 seek($position, $whence)
+
+Seeks to a position in the file.
+
+    $io->seek(0, 0);  # Seek to the beginning
+
+=head3 tell()
+
+Returns the current position in the file.
+
+    my $position = $io->tell();
+
+=head3 eof()
+
+Checks if the end of file has been reached.
+
+    if ($io->eof()) {
+        print "End of file reached\n";
+    }
+
+=head3 flush()
+
+Flushes the file buffer.
+
+    $io->flush();
+
+=head3 fileno()
+
+Returns the file descriptor for the IO handle.
+
+    my $fd = $io->fileno();
+
+=head3 binmode($layer)
+
+Sets the binary mode for the file handle.
+
+    $io->binmode(":raw");
+
+=head3 is_open()
+
+Checks if the IO handle is open.
+
+    if ($io->is_open()) {
+        print "IO handle is open\n";
+    }
+
+=head3 mode()
+
+Returns the file mode.
+
+    my $mode = $io->mode();
+
+=head2 Advanced Methods
+
+=head3 getline()
+
+Reads a line from the file.
+
+    my $line = $io->getline();
+
+=head3 getlines()
+
+Reads all lines from the file.
+
+    my @lines = $io->getlines();
+
+=head3 printf($format, @args)
+
+Prints formatted output to the file.
+
+    $io->printf("Name: %s, Age: %d", $name, $age);
+
+=head3 say(@args)
+
+Prints the arguments to the file, adding a newline.
+
+    $io->say("Hello, World!");
+
+=head3 truncate($length)
+
+Truncates the file to the specified length.
+
+    $io->truncate(100);
+
+=head3 clear()
+
+Clears the contents of the file.
+
+    $io->clear();
+
+=head3 lock_io($operation)
+
+Locks the file for exclusive access.
+
+    $io->lock_io(LOCK_EX);
+
+=head3 unlock_io()
+
+Unlocks the file.
+
+    $io->unlock_io();
+
+=head3 copy_to($destination, $buffer_size)
+
+Copies the contents of the file to another file.
+
+    $io->copy_to($other_io, 8192);
+
+=head3 create_temp()
+
+Creates a temporary file.
+
+    my $temp_filename = $io->create_temp();
+
+=head3 secure_delete()
+
+Securely deletes the file contents.
+
+    $io->secure_delete();
+
+=head3 atomic_operation($code)
+
+Performs an atomic operation on the file.
+
+    $io->atomic_operation(sub {
+        # Atomic operations here
+    });
+
+=head3 get_io_type()
+
+Returns the type of the IO handle.
+
+    my $type = $io->get_io_type();
+
+=head3 autoflush($value)
+
+Sets or gets the autoflush setting for the IO handle.
+
+    $io->autoflush(1);
+
+=head3 get_permissions()
+
+Gets the file permissions.
+
+    my $perms = $io->get_permissions();
+
+=head3 set_permissions($mode)
+
+Sets the file permissions.
+
+    $io->set_permissions(0644);
+
+=head3 get_owner()
+
+Gets the file owner (UID and GID).
+
+    my ($uid, $gid) = $io->get_owner();
+
+=head3 set_owner($uid, $gid)
+
+Sets the file owner.
+
+    $io->set_owner(1000, 1000);
+
+=head2 Configuration Methods
+
+=head3 set_buffer_size($size)
+
+Sets the buffer size for IO operations.
+
+    $io->set_buffer_size(16384);
+
+=head3 get_buffer_size()
+
+Gets the current buffer size.
+
+    my $size = $io->get_buffer_size();
+
+=head3 set_encoding($encoding)
+
+Sets the encoding for text operations.
+
+    $io->set_encoding('utf8');
+
+=head3 get_encoding()
+
+Gets the current encoding.
+
+    my $encoding = $io->get_encoding();
+
+=head3 set_compression($level)
+
+Sets the compression level for IO operations.
+
+    $io->set_compression(6);
+
+=head3 get_compression()
+
+Gets the current compression setting.
+
+    my $compression = $io->get_compression();
+
+=head3 set_compression_level($level)
+
+Sets the compression level.
+
+    $io->set_compression_level(9);
+
+=head3 get_compression_level()
+
+Gets the current compression level.
+
+    my $level = $io->get_compression_level();
+
+=head3 set_flush_interval($interval)
+
+Sets the automatic flush interval.
+
+    $io->set_flush_interval(5);  # Flush every 5 seconds
+
+=head3 get_flush_interval()
+
+Gets the current flush interval.
+
+    my $interval = $io->get_flush_interval();
+
+=head1 OVERLOADED OPERATORS
+
+iclass overloads the following operators:
+
+=over 4
+
+=item * Dereference (*{})
+
+=item * Stringification ("")
+
+=item * Numeric context (0+)
+
+=item * Boolean context
+
+=item * Negation (!)
+
+=item * Assignment (=)
+
+=item * Equality (==, !=)
+
+=item * Comparison (cmp, <=>)
+
+=back
+
+=head1 ERROR HANDLING
+
+iclass uses the error handling mechanisms provided by xclass. Errors can be caught and handled using eval blocks or try-catch constructs.
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Large file operations may consume significant memory, especially with compression enabled.
+
+=item * Some advanced features may not be available on all platforms.
+
+=item * Secure deletion may not be effective on all types of storage media.
+
+=item * Thread safety relies on proper use of synchronization mechanisms.
+
+=back
+
+=head1 CONFIGURATION
+
+iclass inherits its configuration options from xclass. Specific options for iclass include:
+
+=over 4
+
+=item * buffer_size: Size of the buffer for IO operations (default: 8192 bytes).
+
+=item * encoding: Default encoding for text operations (default: 'utf8').
+
+=item * compression: Whether compression is enabled (default: 0).
+
+=item * compression_level: Level of compression for IO operations (default: 6).
+
+=item * compression_threshold: Minimum size for compression to be applied (default: 1024 bytes).
+
+=item * flush_interval: Interval for automatic flushing (default: undef, no automatic flushing).
+
+=back
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Buffer Size: Larger buffer sizes can improve performance for bulk operations but increase memory usage.
+
+=item * Compression: Enables smaller file sizes but adds CPU overhead. Useful for large files or network transfers.
+
+=item * Encoding: UTF-8 encoding may add overhead for non-ASCII text. Consider using 'raw' for binary data.
+
+=item * Flush Interval: Frequent flushing ensures data integrity but may impact performance.
+
+=back
+
+=head1 THREAD SAFETY
+
+iclass is designed to be thread-safe when used correctly. All public methods use xclass synchronization mechanisms to ensure safe concurrent access and modification of IO handles.
+
+=head1 COMPATIBILITY
+
+iclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance. It has been developed and tested primarily on Unix-like systems (Linux, macOS) and Windows.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * IO::Handle
+
+=item * Fcntl
+
+=item * Encode
+
+=item * Compress::Zlib
+
+=item * File::Temp
+
+=item * Time::HiRes
+
+=item * xclass (for handling specific reference types and core functionality)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to iclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<lclass>, L<hclass>, L<aclass>, L<sclass>, L<cclass>, L<gclass>, L<rclass>, L<tclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

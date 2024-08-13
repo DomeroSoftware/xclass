@@ -1,0 +1,604 @@
+=head1 NAME
+
+cclass - Advanced Code Reference Manipulation Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The cclass module provides a robust and feature-rich interface for working with
+code references within the xclass ecosystem. It offers thread-safe operations,
+advanced function manipulation, and seamless integration with other xclass components.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe code reference operations using lclass synchronization
+
+=item * Overloaded operators for intuitive code reference manipulation
+
+=item * Advanced function manipulation: memoization, currying, composition
+
+=item * Execution control: throttling, debouncing, retrying with backoff
+
+=item * Performance analysis: timing and profiling
+
+=item * Thread management: creation, detaching, and joining
+
+=item * Integration with xclass for result wrapping and type handling
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+cclass inherits core functionality from lclass and can be instantiated directly
+or through xclass factory methods. It implements the xclass event system for
+operation tracking and uses xclass for result wrapping and type handling.
+
+=head2 Thread Safety
+
+All methods in cclass are designed to be thread-safe, utilizing lclass synchronization mechanisms.
+
+=head2 Performance Considerations
+
+cclass is optimized for both single-threaded and multi-threaded environments.
+It uses efficient handling of function composition and chaining.
+
+=head2 Extensibility
+
+The class is designed to be easily extended with additional methods and
+supports custom event triggers for all operations.
+
+=head2 Handling of Circular References
+
+cclass, while primarily dealing with code references, is also equipped to handle circular references as part of the xclass ecosystem.
+
+- Code references wrapped by cclass can safely reference other xclass objects, including other cclass objects.
+- Any circular references created through closures or shared data structures are automatically managed.
+- The garbage collector correctly handles cclass objects involved in circular references.
+- Users can create complex callback structures or event systems without worrying about circular reference management.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use cclass;
+
+    # Create a new cclass object
+    my $func = cclass->new(sub { $_[0] + $_[1] });
+
+    # Basic usage
+    my $result = $func->call(2, 3);  # Returns 5
+
+    # Advanced usage
+    $func->memoize()->throttle(5)->retry(3, 1);
+    $result = $func->call(2, 3);  # Returns 5, memoized and throttled
+
+    # Function composition
+    my $composed = $func->compose(sub { $_[0] * 2 }, sub { $_[0] + 1 });
+    $result = $composed->call(2, 3);  # Returns 11 ((2+3)*2 + 1)
+
+    # Threading
+    my $thread = $func->create_thread(2, 3);
+    $thread->join;
+
+=head1 EXAMPLES
+
+=head2 Memoization and Throttling
+
+    my $expensive_func = cclass->new(sub {
+        my ($x, $y) = @_;
+        sleep(1);  # Simulate expensive computation
+        return $x * $y;
+    });
+
+    $expensive_func->memoize()->throttle(2);
+
+    for my $i (1..5) {
+        my $result = $expensive_func->call(2, 3);
+        print "Result: $result\n";
+    }
+
+This example demonstrates memoization and throttling of an expensive function.
+
+=head2 Retry with Exponential Backoff
+
+    my $unreliable_func = cclass->new(sub {
+        die "Random failure" if rand() < 0.7;
+        return "Success";
+    });
+
+    $unreliable_func->retry_with_backoff(5, 1, 10);
+
+    eval {
+        my $result = $unreliable_func->call();
+        print "Result: $result\n";
+    };
+    if ($@) {
+        print "Function failed after multiple retries: $@\n";
+    }
+
+This example shows how to use retry with exponential backoff for an unreliable function.
+
+=head2 Profiling and Timing
+
+    my $func_to_profile = cclass->new(sub {
+        my $sum = 0;
+        for (1..1000) {
+            $sum += $_;
+        }
+        return $sum;
+    });
+
+    my $profile_result = $func_to_profile->profile(1000);
+    print "Average execution time: $profile_result->{average_time} seconds\n";
+
+    my $timed_result = $func_to_profile->time();
+    print "Single execution time: $timed_result->{time} seconds\n";
+    print "Result: $timed_result->{result}\n";
+
+
+=head2 Function Call Overloading
+
+There are multiple ways to call a cclass object:
+
+    my $add = cclass->new(sub { $_[0] + $_[1] });
+
+    # Standard method call
+    print $add->call(2, 3), "\n";  # Outputs: 5
+
+    # Using overloaded function call
+    print $add->(2, 3), "\n";      # Outputs: 5
+
+    # Using &{} dereferencing
+    print &{$add}(2, 3), "\n";     # Outputs: 5
+
+=head2 Stringification
+
+The stringification overload in cclass provides a meaningful representation of the wrapped code reference:
+
+    my $add = cclass->new(sub { $_[0] + $_[1] });
+    print "$add\n";
+    # Outputs something like:
+    # cclass(CODE(0x55f5e0c5f550))
+    # sub { $_[0] + $_[1] }
+
+    my $complex_func = cclass->new(sub {
+        my ($x, $y) = @_;
+        if ($x > $y) {
+            return $x - $y;
+        } else {
+            return $y - $x;
+        }
+    });
+
+    print "$complex_func\n";    # Outputs something like:
+
+    # cclass(CODE(0x55f5e0c5f668))
+    # sub {
+    #     my($x, $y) = @_;
+    #     if ($x > $y) {
+    #         return $x - $y;
+    #     }
+    #     else {
+    #         return $y - $x;
+    #     }
+    # }
+
+This stringification provides both the memory address of the code reference and a decompiled representation of the function, which can be useful for debugging and introspection.
+
+=head2 Numification
+
+In numeric contexts, a cclass object is treated as a number:
+
+    my $func = cclass->new(sub { 42 });
+    print 0 + $func, "\n";  # Outputs: 1 (true, because the function is defined)
+
+=head2 Boolean Context
+
+cclass objects can be used in boolean contexts:
+
+    my $func = cclass->new(sub { 1 });
+    if ($func) {
+        print "Function is defined\n";
+    }
+
+=head2 Negation
+
+The negation operator is overloaded:
+
+    my $func = cclass->new(sub { 0 });
+    if (!$func) {
+        print "This won't be printed because the function is defined\n";
+    }
+
+=head2 Equality Comparison
+
+cclass objects can be compared for equality:
+
+    my $func1 = cclass->new(sub { 1 });
+    my $func2 = cclass->new(sub { 1 });
+    my $func3 = $func1->clone();
+
+    print "func1 == func2: ", ($func1 == $func2 ? "true" : "false"), "\n";  # Likely false
+    print "func1 == func3: ", ($func1 == $func3 ? "true" : "false"), "\n";  # True
+
+    print "func1 != func2: ", ($func1 != $func2 ? "true" : "false"), "\n";  # Likely true
+
+=head2 Comparison
+
+cclass objects can be compared using string comparison operators:
+
+    my $func1 = cclass->new(sub { "a" });
+    my $func2 = cclass->new(sub { "b" });
+
+    print "func1 cmp func2: ", ($func1 cmp $func2), "\n";  # Outputs: -1, 0, or 1
+    print "func1 <=> func2: ", ($func1 <=> $func2), "\n";  # Outputs: -1, 0, or 1
+
+=head2 Composition
+
+Functions can be composed using the . operator:
+
+    my $add_one = cclass->new(sub { $_[0] + 1 });
+    my $double = cclass->new(sub { $_[0] * 2 });
+
+    my $composed = $add_one . $double;
+    print $composed->(3), "\n";  # Outputs: 8 ((3+1)*2)
+
+=head2 Memoization
+
+Demonstrate memoization with cache size and expiration:
+
+    my $fibonacci = cclass->new(sub {
+        my ($n) = @_;
+        return $n if $n < 2;
+        return $fibonacci->($n-1) + $fibonacci->($n-2);
+    });
+
+    $fibonacci->memoize(100, 3600);  # Cache up to 100 results for 1 hour
+    print $fibonacci->(30), "\n";  # First call is slow
+    print $fibonacci->(30), "\n";  # Second call is fast due to memoization
+
+=head2 Throttling
+
+Demonstrate throttling to limit call frequency:
+
+    my $api_call = cclass->new(sub {
+        print "API called at " . localtime() . "\n";
+        return "API result";
+    });
+
+    $api_call->throttle(2);  # Limit to one call every 2 seconds
+
+    for (1..5) {
+        $api_call->();
+    }
+
+=head2 Retry with Backoff
+
+Show retry functionality with exponential backoff:
+
+    my $unreliable_func = cclass->new(sub {
+        die "Random failure" if rand() < 0.7;
+        return "Success";
+    });
+
+    $unreliable_func->retry_with_backoff(5, 1, 10);
+
+    eval {
+        my $result = $unreliable_func->();
+        print "Result: $result\n";
+    };
+    if ($@) {
+        print "Function failed after multiple retries: $@\n";
+    }
+
+=head2 Profiling
+
+Profile a function's performance:
+
+    my $func_to_profile = cclass->new(sub {
+        my $sum = 0;
+        $sum += $_ for 1..1000;
+        return $sum;
+    });
+
+    my $profile = $func_to_profile->profile(100);
+    print "Average time: $profile->{average_time} seconds\n";
+
+=head2 Threading
+
+Demonstrate thread creation and management:
+
+    my $threaded_func = cclass->new(sub {
+        my ($id) = @_;
+        return "Thread $id completed";
+    });
+
+    my $thread = $threaded_func->create_thread(1);
+    my $result = $thread->join;
+    print $result, "\n";
+
+These examples showcase the various ways to use cclass objects, leveraging both the overloaded operators and the standard class methods to manipulate and execute code references in a flexible and powerful manner.
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($coderef, %options)
+
+Creates a new cclass object.
+
+=head2 Core Methods
+
+=head3 call(@args)
+
+Calls the wrapped code reference with the given arguments.
+
+=head3 set($coderef)
+
+Sets a new code reference for the object.
+
+=head3 get()
+
+Returns the wrapped code reference.
+
+=head2 Function Manipulation
+
+=head3 memoize($max_cache_size, $expiration)
+
+Memoizes the function results.
+
+=head3 curry(@curry_args)
+
+Curries the function with the given arguments.
+
+=head3 compose(@coderefs)
+
+Composes the function with other functions.
+
+=head2 Execution Control
+
+=head3 throttle($limit)
+
+Throttles function calls to a specified time limit.
+
+=head3 debounce($delay)
+
+Debounces function calls.
+
+=head3 retry($max_attempts, $delay)
+
+Retries the function on failure.
+
+=head3 retry_with_backoff($max_attempts, $initial_delay, $max_delay)
+
+Retries the function with exponential backoff.
+
+=head3 timeout($seconds)
+
+Sets a timeout for function execution.
+
+=head2 Performance Analysis
+
+=head3 time(@args)
+
+Times the execution of the function.
+
+=head3 profile($iterations, @args)
+
+Profiles the function over multiple iterations.
+
+=head2 Threading
+
+=head3 create_thread(@args)
+
+Creates a new thread with the function.
+
+=head3 detach(@args)
+
+Detaches a thread with the function.
+
+=head3 join($timeout, @args)
+
+Joins a thread with the function.
+
+=head2 Utility Methods
+
+=head3 apply($func)
+
+Applies a function to the result of the wrapped function.
+
+=head3 chain(@funcs)
+
+Chains multiple functions.
+
+=head3 partial(@args)
+
+Partially applies arguments to the function.
+
+=head3 flip()
+
+Flips the order of arguments.
+
+=head3 limit_args($n)
+
+Limits the number of arguments passed to the function.
+
+=head3 delay($seconds)
+
+Delays the execution of the function.
+
+=head3 wrap_result(@result)
+
+Wraps the result using xclass.
+
+=head3 call_and_wrap(@args)
+
+Calls the function and wraps the result.
+
+=head3 defined()
+
+Checks if the code reference is defined.
+
+=head1 OVERLOADED OPERATORS
+
+cclass overloads the following operators:
+
+=over 4
+
+=item * Function call (&{})
+
+    Allows you to call the wrapped code reference directly:
+    $code->(@args)  # equivalent to $code->call(@args)
+    &{$code}(@args) # also equivalent to $code->call(@args)
+
+=item * Stringification ("")
+
+=item * Numification (0+)
+
+=item * Boolean context
+
+=item * Negation (!)
+
+=item * Equality (==, !=)
+
+=item * Comparison (cmp, <=>)
+
+=item * Composition (.)
+
+=back
+
+=head1 ERROR HANDLING
+
+cclass uses the error handling mechanisms provided by xclass. The following error types may be thrown:
+
+=over 4
+
+=item * TYPE_ERROR
+
+=item * RUNTIME_ERROR
+
+=item * TIMEOUT_ERROR
+
+=back
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Memoization may consume significant memory for functions with many unique inputs.
+
+=item * Thread safety relies on proper use of synchronization mechanisms.
+
+=item * Some advanced features may have a performance impact, especially in tight loops.
+
+=item * Closures and references to lexical variables may not behave as expected when used with threading methods.
+
+=back
+
+=head1 CONFIGURATION
+
+cclass inherits its configuration options from lclass. Refer to the lclass documentation for configuration options.
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Memoization: Can significantly improve performance for expensive functions with repetitive inputs, but may consume memory.
+
+=item * Throttling and Debouncing: Useful for rate-limiting but can introduce delays.
+
+=item * Composition and Chaining: Efficient for combining multiple operations but may add slight overhead.
+
+=item * Threading: Can improve performance for concurrent operations but introduces thread management overhead.
+
+=back
+
+=head1 THREAD SAFETY
+
+cclass is designed to be thread-safe when used correctly. All public methods use lclass synchronization mechanisms to ensure safe concurrent access and modification of the wrapped code reference.
+
+=head1 COMPATIBILITY
+
+cclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * threads
+
+=item * threads::shared
+
+=item * JSON::PP
+
+=item * lclass (for utility methods and thread-safe operations)
+
+=item * xclass (for handling specific reference types)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to cclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<lclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

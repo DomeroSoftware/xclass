@@ -1,0 +1,783 @@
+=head1 NAME
+
+rclass - Advanced Thread-Safe Reference Handling Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The rclass module provides a robust and versatile interface for managing references
+of any type within the xclass ecosystem. It leverages lclass functionality
+for core operations and integrates seamlessly with xclass for type-specific
+handling.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe reference operations using lclass synchronization
+
+=item * Support for all reference types (scalar, array, hash, code, glob)
+
+=item * Automatic type detection and appropriate handling
+
+=item * Overloaded operators for intuitive reference manipulation
+
+=item * Advanced utility methods for reference operations
+
+=item * Seamless integration with other xclass reference types
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+rclass utilizes xclass for type-specific reference handling and implements the xclass
+event system for operation tracking. It seamlessly interacts with other xclass data types.
+
+=head2 Thread Safety
+
+All methods in rclass are designed to be thread-safe, utilizing lclass synchronization mechanisms.
+
+=head2 Performance Considerations
+
+rclass is optimized for both single-threaded and multi-threaded environments,
+with efficient handling of different reference types.
+
+=head2 Extensibility
+
+The rclass is designed to be easily extended with additional reference operations
+and supports custom event triggers for all operations.
+
+=head2 Handling of Circular References
+
+rclass, designed for managing regular expressions within the xclass ecosystem, includes robust circular reference handling capabilities.
+
+- Regular expression objects wrapped by rclass can safely be part of complex data structures involving other xclass objects.
+- Circular references that may occur in pattern matching callbacks or in data structures containing regular expressions are automatically managed.
+- The garbage collection process correctly handles rclass objects involved in circular references.
+- Users can create sophisticated pattern matching systems or data validation structures using rclass objects without manual intervention for circular reference management.
+- Any circular references created through shared patterns or in regex-based parsing systems are handled transparently by the xclass framework.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use xclass;
+
+    # Create a new rclass object
+    my $ref = Rc(\$scalar);
+
+    # Set a new reference
+    $ref->set(\@array);
+
+    # Dereference
+    my $value = $ref->deref;
+
+    # Apply a function to the reference content
+    $ref->apply(sub { $_[0] * 2 });
+
+    # Merge with another rclass object
+    $ref->merge($other_ref);
+
+    # Clone the reference
+    my $clone = $ref->clone;
+
+    # Compare references
+    if ($ref->equals($other_ref)) {
+        print "References are equal\n";
+    }
+
+=head1 EXAMPLES
+
+=head2 Basic Usage and Overloaded Operators
+
+=head3 Scalar References
+
+    my $scalar_ref = Rc(\10);
+    print $$scalar_ref;  # Prints 10
+    print $scalar_ref->deref;  # Alternative way to dereference
+
+=head3 Array References
+
+    my $array_ref = Rc([1, 2, 3]);
+    push @$array_ref, 4;  # Adds 4 to the array
+    print $array_ref->deref->[3];  # Prints 4
+
+=head3 Hash References
+
+    my $hash_ref = Rc({a => 1, b => 2});
+    print $hash_ref->deref->{a};  # Prints 1
+    $hash_ref->deref->{c} = 3;  # Adds a new key-value pair
+
+=head3 Code References
+
+    my $code_ref = Rc(sub { print "Hello, World!\n" });
+    $code_ref->deref->();  # Executes the code reference
+
+=head3 Glob References
+
+    open my $fh, '>', 'test.txt';
+    my $glob_ref = Rc(\*$fh);
+    print {$glob_ref->deref} "Writing to file\n";
+
+=head2 Reference Type Detection and Manipulation
+
+    my $dynamic_ref = Rc(\42);
+    print $dynamic_ref->get_type, "\n";  # Outputs: SCALAR
+
+    $dynamic_ref->set([1, 2, 3]);
+    print $dynamic_ref->get_type, "\n";  # Outputs: ARRAY
+
+=head2 Applying Functions to References
+
+    my $ref = Rc({a => 1, b => 2});
+    $ref->apply(sub { 
+        my $hash = shift;
+        $hash->{c} = $hash->{a} + $hash->{b};
+        return $hash;
+    });
+    print $ref->deref->{c};  # Prints 3
+
+=head2 Merging References
+
+    my $ref1 = Rc({a => 1, b => 2});
+    my $ref2 = Rc({c => 3, d => 4});
+    $ref1->merge($ref2);
+    print $ref1->deref->{c};  # Prints 3
+
+=head2 Cloning and Comparison
+
+    my $original = Rc([1, 2, 3]);
+    my $clone = $original->clone;
+    print $original->equals($clone) ? "Equal" : "Not equal";  # Prints "Equal"
+
+=head2 Size and Clearing
+
+    my $array_ref = Rc([1, 2, 3, 4, 5]);
+    print $array_ref->size, "\n";  # Prints 5
+    $array_ref->clear;
+    print $array_ref->size, "\n";  # Prints 0
+
+=head2 Hash Code Generation
+
+    my $ref1 = Rc({a => 1, b => 2});
+    my $ref2 = Rc({a => 1, b => 2});
+    print $ref1->hash_code eq $ref2->hash_code ? "Same hash" : "Different hash";
+
+=head2 Thread-Safe Operations
+
+    use threads;
+    use threads::shared;
+
+    my $shared_data = &share({});
+    my $shared_ref = Rc($shared_data);
+
+    my @threads = map {
+        threads->create(sub {
+            for (1..1000) {
+                $shared_ref->apply(sub { $_->{count}++ });
+            }
+        });
+    } 1..10;
+
+    $_->join for @threads;
+    print $shared_ref->deref->{count}, "\n";  # Should print 10000
+
+=head2 Integration with xclass Ecosystem
+
+    my $array_ref = Rc([1, 2, 3, 4, 5]);
+    my $aclass_array = $array_ref->deref;  # Returns an aclass object
+    my $sum = $aclass_array->reduce(sub { $a + $b });
+    print "Sum: $sum\n";  # Prints sum of array elements
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($ref, %options)
+
+Creates a new rclass object.
+
+    my $ref = rclass->new(\$scalar);
+
+=head2 Core Methods
+
+=head3 set($reference)
+
+Sets the reference.
+
+    $ref->set(\@array);
+
+=head3 deref()
+
+Dereferences the stored reference.
+
+    my $value = $ref->deref;
+
+=head3 get_type()
+
+Gets the type of the reference.
+
+    my $type = $ref->get_type;
+
+=head2 Advanced Methods
+
+=head3 apply($func)
+
+Applies a function to the reference content.
+
+    $ref->apply(sub { $_[0] * 2 });
+
+=head3 merge($other)
+
+Merges with another rclass object.
+
+    $ref->merge($other_ref);
+
+=head3 size()
+
+Gets the size of the reference.
+
+    my $size = $ref->size;
+
+=head3 clear()
+
+Clears the reference content.
+
+    $ref->clear;
+
+=head3 clone()
+
+Creates a clone of the reference.
+
+    my $clone = $ref->clone;
+
+=head3 equals($other)
+
+Compares with another rclass object for equality.
+
+    if ($ref->equals($other_ref)) {
+        print "References are equal\n";
+    }
+
+=head3 compare($other)
+
+Compares with another rclass object.
+
+    my $result = $ref->compare($other_ref);
+
+=head3 hash_code()
+
+Gets the hash code of the reference.
+
+    my $hash = $ref->hash_code;
+
+=head1 OVERLOADED OPERATORS
+
+rclass overloads the following operators for intuitive reference manipulation:
+
+=over 4
+
+=item * Scalar dereference (${}): Returns the dereferenced value
+
+=item * Array dereference (@{}): Returns the dereferenced array
+
+=item * Hash dereference (%{}): Returns the dereferenced hash
+
+=item * Code dereference (&{}): Returns the dereferenced code reference
+
+=item * Glob dereference (*{}): Returns the dereferenced glob
+
+=item * Stringification (""): Returns a string representation of the reference
+
+=item * Numeric context (0+): Returns 1 if the reference is defined, 0 otherwise
+
+=item * Boolean context: Returns true if the reference is defined
+
+=item * Assignment (=): Assigns a new reference
+
+=back
+
+=head1 ERROR HANDLING
+
+rclass uses the error handling mechanisms provided by lclass. Errors are thrown using the `throw` method:
+
+    $self->throw("Error message", 'ERROR_TYPE');
+
+Errors can be caught and handled using eval blocks or try-catch constructs if you're using a module like Try::Tiny.
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Some operations may not be supported for all reference types.
+
+=item * Care should be taken when manipulating references to shared data structures in multi-threaded environments.
+
+=item * Performance may be impacted when dealing with very large data structures.
+
+=back
+
+=head1 CONFIGURATION
+
+rclass uses the configuration options provided by lclass. There are no specific configuration options for rclass.
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Reference Type: Different reference types may have varying performance characteristics for certain operations.
+
+=item * Thread Safety: The thread-safe design may introduce some overhead in single-threaded scenarios.
+
+=item * Large Data Structures: Operations on very large data structures may impact performance.
+
+=item * Cloning: Deep cloning of complex data structures can be resource-intensive.
+
+=back
+
+=head1 THREAD SAFETY
+
+rclass is designed to be thread-safe. All public methods use lclass synchronization mechanisms to ensure safe concurrent access and modification of references.
+
+=head1 COMPATIBILITY
+
+rclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance. It has been developed and tested primarily on Unix-like systems (Linux, macOS) and Windows.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * Scalar::Util (for type checking)
+
+=item * lclass (for utility methods and thread-safe operations)
+
+=item * xclass (for handling specific reference types)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to rclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<lclass>, L<hclass>, L<aclass>, L<sclass>, L<cclass>, L<iclass>, L<gclass>, L<tclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
+
+=head1 DESCRIPTION
+
+The rclass module provides a robust and versatile interface for managing references
+of any type within the xclass ecosystem. It leverages lclass functionality
+for core operations and integrates seamlessly with xclass for type-specific
+handling.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe reference operations using lclass synchronization
+
+=item * Support for all reference types (scalar, array, hash, code, glob)
+
+=item * Automatic type detection and appropriate handling
+
+=item * Overloaded operators for intuitive reference manipulation
+
+=item * Advanced utility methods for reference operations
+
+=item * Seamless integration with other xclass reference types
+
+=item * Built-in serialization and deserialization capabilities
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+rclass utilizes xclass for type-specific reference handling and implements the xclass
+event system for operation tracking. It seamlessly interacts with other xclass data types.
+
+=head2 Thread Safety
+
+All methods in rclass are designed to be thread-safe, utilizing lclass synchronization mechanisms.
+
+=head2 Performance Considerations
+
+rclass is optimized for both single-threaded and multi-threaded environments,
+with efficient handling of different reference types.
+
+=head2 Extensibility
+
+The rclass is designed to be easily extended with additional reference operations
+and supports custom event triggers for all operations.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use rclass;
+
+    # Create a new rclass object
+    my $ref = rclass->new(\$scalar);
+
+    # Set a new reference
+    $ref->set(\@array);
+
+    # Dereference
+    my $value = $ref->deref;
+
+    # Apply a function to the reference content
+    $ref->apply(sub { $_[0] * 2 });
+
+    # Merge with another rclass object
+    $ref->merge($other_ref);
+
+    # Clone the reference
+    my $clone = $ref->clone;
+
+    # Compare references
+    if ($ref->equals($other_ref)) {
+        print "References are equal\n";
+    }
+    
+=head1 EXAMPLES
+
+=head2 Basic Usage and Overloaded Operators
+
+    use xclass;
+
+    # Create a new rclass object
+    my $scalar_ref = Rc(\10);
+    print $$scalar_ref;  # Prints 10
+
+    my $array_ref = Rc([1, 2, 3]);
+    push @$array_ref, 4;  # Adds 4 to the array
+    print $array_ref->deref->[3];  # Prints 4
+
+    my $hash_ref = Rc({a => 1, b => 2});
+    print $hash_ref->deref->{a};  # Prints 1
+
+=head2 Reference Type Detection and Manipulation
+
+    my $dynamic_ref = Rc(\42);
+    print $dynamic_ref->get_type, "\n";  # Outputs: SCALAR
+
+    $dynamic_ref->set([1, 2, 3]);
+    print $dynamic_ref->get_type, "\n";  # Outputs: ARRAY
+
+=head2 Applying Functions to References
+
+    my $ref = Rc({a => 1, b => 2});
+    $ref->apply(sub { 
+        my $hash = shift;
+        $hash->{c} = $hash->{a} + $hash->{b};
+        return $hash;
+    });
+    print $ref->deref->{c};  # Prints 3
+
+=head2 Merging References
+
+    my $ref1 = Rc({a => 1, b => 2});
+    my $ref2 = Rc({c => 3, d => 4});
+    $ref1->merge($ref2);
+    print $ref1->deref->{c};  # Prints 3
+
+=head2 Cloning and Comparison
+
+    my $original = Rc([1, 2, 3]);
+    my $clone = $original->clone;
+    print $original->equals($clone) ? "Equal" : "Not equal";  # Prints "Equal"
+
+=head2 Size and Clearing
+
+    my $array_ref = Rc([1, 2, 3, 4, 5]);
+    print $array_ref->size, "\n";  # Prints 5
+    $array_ref->clear;
+    print $array_ref->size, "\n";  # Prints 0
+
+=head2 Hash Code Generation
+
+    my $ref1 = Rc({a => 1, b => 2});
+    my $ref2 = Rc({a => 1, b => 2});
+    print $ref1->hash_code eq $ref2->hash_code ? "Same hash" : "Different hash";
+
+=head2 Thread-Safe Operations
+
+    use threads;
+
+    my $shared_ref = Rc(shared_clone({count => 0}));
+
+    my @threads = map {
+        threads->create(sub {
+            for (1..1000) {
+                $shared_ref->apply(sub { $_->{count}++ });
+            }
+        });
+    } 1..10;
+
+    $_->join for @threads;
+    print $shared_ref->deref->{count}, "\n";  # Should print 10000
+
+=head2 Integration with xclass Ecosystem
+
+    my $array_ref = Rc([1, 2, 3, 4, 5]);
+    my $aclass_array = $array_ref->deref;  # Converts to aclass
+    my $filtered = $aclass_array->filter(sub { $_ % 2 == 0 });
+    print $filtered->join(", "), "\n";  # Prints 2, 4
+
+These examples showcase the core functionality of rclass within the xclass ecosystem, demonstrating its capabilities in reference manipulation, type handling, thread-safe operations, and integration with other xclass components.
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($ref, %options)
+
+Creates a new rclass object.
+
+    my $ref = rclass->new(\$scalar);
+
+=head2 Core Methods
+
+=head3 set($reference)
+
+Sets the reference.
+
+    $ref->set(\@array);
+
+=head3 deref()
+
+Dereferences the stored reference.
+
+    my $value = $ref->deref;
+
+=head3 get_type()
+
+Gets the type of the reference.
+
+    my $type = $ref->get_type;
+
+=head2 Advanced Methods
+
+=head3 apply($func)
+
+Applies a function to the reference content.
+
+    $ref->apply(sub { $_[0] * 2 });
+
+=head3 merge($other)
+
+Merges with another rclass object.
+
+    $ref->merge($other_ref);
+
+=head3 size()
+
+Gets the size of the reference.
+
+    my $size = $ref->size;
+
+=head3 clear()
+
+Clears the reference content.
+
+    $ref->clear;
+
+=head3 clone()
+
+Creates a clone of the reference.
+
+    my $clone = $ref->clone;
+
+=head3 equals($other)
+
+Compares with another rclass object for equality.
+
+    if ($ref->equals($other_ref)) {
+        print "References are equal\n";
+    }
+
+=head3 compare($other)
+
+Compares with another rclass object.
+
+    my $result = $ref->compare($other_ref);
+
+=head3 hash_code()
+
+Gets the hash code of the reference.
+
+    my $hash = $ref->hash_code;
+
+=head1 OVERLOADED OPERATORS
+
+rclass overloads the following operators for intuitive reference manipulation:
+
+=over 4
+
+=item * Scalar dereference (${}): Returns the dereferenced value
+
+=item * Array dereference (@{}): Returns the dereferenced array
+
+=item * Hash dereference (%{}): Returns the dereferenced hash
+
+=item * Code dereference (&{}): Returns the dereferenced code reference
+
+=item * Glob dereference (*{}): Returns the dereferenced glob
+
+=item * Stringification (""): Returns a string representation of the reference
+
+=item * Numeric context (0+): Returns 1 if the reference is defined, 0 otherwise
+
+=item * Boolean context: Returns true if the reference is defined
+
+=item * Assignment (=): Assigns a new reference
+
+=back
+
+=head1 ERROR HANDLING
+
+rclass uses the error handling mechanisms provided by xclass. The following error types may be thrown:
+
+=over 4
+
+=item * TYPE_ERROR: Thrown when an invalid type is provided to a method.
+
+=item * OPERATION_ERROR: Thrown when an operation fails or is not supported for the current reference type.
+
+=back
+
+Errors can be caught and handled using eval blocks or try-catch constructs if you're using a module like Try::Tiny.
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Some operations may not be supported for all reference types.
+
+=item * Care should be taken when manipulating references to shared data structures in multi-threaded environments.
+
+=item * Serialization and deserialization of code references and globs may have limitations.
+
+=item * Performance may be impacted when dealing with very large data structures.
+
+=back
+
+=head1 CONFIGURATION
+
+rclass inherits its configuration options from xclass. There are no specific configuration options for rclass.
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Reference Type: Different reference types may have varying performance characteristics for certain operations.
+
+=item * Thread Safety: The thread-safe design may introduce some overhead in single-threaded scenarios.
+
+=item * Large Data Structures: Operations on very large data structures may impact performance.
+
+=item * Cloning: Deep cloning of complex data structures can be resource-intensive.
+
+=back
+
+=head1 THREAD SAFETY
+
+rclass is designed to be thread-safe. All public methods use lclass synchronization mechanisms to ensure safe concurrent access and modification of references.
+
+=head1 COMPATIBILITY
+
+rclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance. It has been developed and tested primarily on Unix-like systems (Linux, macOS) and Windows.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * Scalar::Util (for type checking)
+
+=item * lclass (for utility methods and thread-safe operations)
+
+=item * xclass (for handling specific reference types)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to rclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<lclass>, L<hclass>, L<aclass>, L<sclass>, L<cclass>, L<iclass>, L<gclass>, L<tclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

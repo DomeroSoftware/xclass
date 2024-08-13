@@ -1,0 +1,697 @@
+=head1 NAME
+
+tclass - Advanced Thread Control and Management Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The tclass module provides a robust and feature-rich interface for creating, managing,
+and controlling threads with integrated shared data handling through xclass-wrapped
+GLOB references. It offers a comprehensive set of thread management capabilities, including:
+
+=over 4
+
+=item * Thread lifecycle management (creation, starting, stopping, detaching, joining)
+
+=item * Shared data handling through GLOB references with type-specific access
+
+=item * Extended class support for complex thread-specific data structures
+
+=item * Customizable error and kill signal handling
+
+=item * Thread-safe operations and synchronization
+
+=item * High-resolution timing functions for precise thread control
+
+=item * Comprehensive status tracking and reporting
+
+=item * Support for both detached and joinable threads
+
+=item * Graceful termination and cleanup mechanisms
+
+=back
+
+Key features include:
+
+=over 4
+
+=item * Seamless integration with xclass ecosystem
+
+=item * Thread-safe operations using lclass synchronization
+
+=item * Flexible shared data management with support for various data types
+
+=item * Event-driven architecture with customizable triggers
+
+=item * Advanced error handling and reporting
+
+=item * Support for extended classes and custom data structures
+
+=item * High-resolution sleep and yield functions for fine-grained thread control
+
+=item * Comprehensive string representation and comparison methods
+
+=back
+
+This tclass is designed to provide a powerful yet easy-to-use interface for
+complex multi-threaded applications within the xclass framework, ensuring
+thread safety, proper resource management, and extensibility.
+
+=head2 Handling of Circular References
+
+tclass, designed for thread management, incorporates robust circular reference handling as part of the xclass ecosystem.
+
+- Thread objects can safely reference other xclass objects, including other thread objects, without causing memory leaks.
+- Circular references in shared data structures across threads are automatically detected and managed.
+- The garbage collection process correctly handles tclass objects and their associated data involved in circular references.
+- Users can create complex multi-threaded applications with interconnected data structures without manual intervention for circular reference management.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use tclass;
+
+    # Create a new thread
+    my $thread = tclass->new('MyApp', 'WorkerThread',
+        scalar => 0,
+        array => [],
+        hash => {},
+        code => sub {
+            my ($self, @args) = @_;
+            while (!$self->should_stop) {
+                # Thread work here
+                $self->sleep(0.1);
+            }
+        },
+        on_kill => sub {
+            my $self = shift;
+            # Cleanup code
+        },
+        on_error => sub {
+            my ($self, $error) = @_;
+            # Error handling code
+        }
+    );
+
+    # Start the thread
+    $thread->start(@args);
+
+    # Interact with shared data
+    $thread->SCALAR->set(42);
+    my $value = $thread->SCALAR->get;
+
+    # Stop the thread
+    $thread->stop;
+
+=head1 EXAMPLES
+
+=head2 Basic Thread Creation and Management
+
+    use xclass;
+
+    my $thread = Tc('MyApp', 'WorkerThread',
+        scalar => 0,
+        array => [],
+        hash => { status => 'idle' },
+        code => sub {
+            my ($self) = @_;
+            while (!$self->should_stop) {
+                my $status = $self->HASH->get('status');
+                if ($status eq 'work') {
+                    $self->SCALAR->inc(1);
+                    $self->HASH->set('status', 'idle');
+                }
+                $self->sleep(0.1);
+            }
+        },
+        on_error => sub {
+            my ($self, $error) = @_;
+            $self->HASH->set('error', $error);
+        }
+    );
+
+    $thread->start;
+    $thread->HASH->set('status', 'work');
+    sleep(1);
+    print "Work done: ", $thread->SCALAR->get, "\n";
+    $thread->stop;
+
+=head2 Using Extended Classes
+
+    package MyCounter;
+    use Moo;
+    has count => (is => 'rw', default => 0);
+    sub increment { shift->count(shift->count + 1) }
+
+    package main;
+    use xclass;
+
+    my $thread = Tc('MyApp', 'CounterThread',
+        counter => MyCounter->new,
+        code => sub {
+            my ($self) = @_;
+            while (!$self->should_stop) {
+                $self->ext('counter')->increment;
+                $self->sleep(1);
+            }
+        }
+    );
+
+    $thread->start;
+    sleep(5);
+    $thread->stop;
+    print "Final count: ", $thread->ext('counter')->count, "\n";
+
+=head2 Thread Synchronization and Shared Data Manipulation
+
+    my $thread = Tc('MyApp', 'SyncThread',
+        array => [],
+        hash => { sum => 0 },
+        code => sub {
+            my ($self) = @_;
+            while (!$self->should_stop) {
+                $self->ARRAY->push(int(rand(100)));
+                my $sum = $self->ARRAY->reduce(sub { $a + $b });
+                $self->HASH->set('sum', $sum);
+                $self->sleep(0.5);
+            }
+        }
+    );
+
+    $thread->start;
+    sleep(5);
+    $thread->stop;
+    print "Final sum: ", $thread->HASH->get('sum'), "\n";
+    print "Array: ", $thread->ARRAY->join(', '), "\n";
+
+=head2 Error Handling and Logging
+
+    my $thread = Tc('MyApp', 'ErrorThread',
+        hash => { log => [] },
+        code => sub {
+            my ($self) = @_;
+            $self->HASH->get('log')->push("Thread started");
+            eval { die "Simulated error" };
+            if ($@) {
+                $self->HASH->get('log')->push("Error: $@");
+                $self->throw($@);
+            }
+        },
+        on_error => sub {
+            my ($self, $error) = @_;
+            $self->HASH->get('log')->push("Error handled: $error");
+        }
+    );
+
+    $thread->start;
+    $thread->join;
+    print "Log:\n", $thread->HASH->get('log')->join("\n"), "\n";
+
+=head2 Using lclass Options
+
+tclass inherits lclass functionality, which is initialized in the constructor. The lclass options are passed directly in the constructor arguments, not in a separate 'lclass' hash:
+
+    my $thread = Tc('MyApp', 'OptionsThread',
+        scalar => 0,
+        code => sub {
+            my ($self) = @_;
+            while (!$self->should_stop) {
+                $self->SCALAR->inc(1);
+                $self->sleep(1);
+            }
+        },
+        debug => 1,
+        trace => 1,
+        log_file => '/tmp/thread_log.txt',
+        on_error => sub {
+            my ($self, $error, $method, @args) = @_;
+            warn "Error in method $method: $error";
+        }
+    );
+
+    $thread->start;
+    sleep(5);
+    $thread->stop;
+
+=head2 Detached Threads
+
+    my $detached_thread = Tc('MyApp', 'DetachedThread',
+        scalar => 0,
+        code => sub {
+            my ($self) = @_;
+            for (1..5) {
+                $self->SCALAR->inc(1);
+                $self->sleep(1);
+            }
+        },
+        auto_detach => 1
+    );
+
+    $detached_thread->start;
+    print "Thread detached: ", $detached_thread->detached ? "Yes" : "No", "\n";
+
+=head2 Thread Pool Implementation
+
+    sub create_worker {
+        my ($id, $task_queue, $results) = @_;
+        return Tc("MyApp", "Worker$id",
+            task_queue => $task_queue,
+            results => $results,
+            code => sub {
+                my ($self) = @_;
+                while (!$self->should_stop) {
+                    if (my $task = $self->get('task_queue')->shift) {
+                        my $result = $task * 2;  # Simple task: double the input
+                        $self->get('results')->set($task, $result);
+                    } else {
+                        $self->sleep(0.1);
+                    }
+                }
+            }
+        );
+    }
+
+    my $task_queue = Ac([]);
+    my $results = Hc({});
+
+    my @workers = map { create_worker($_, $task_queue, $results) } 1..5;
+
+    $_->start for @workers;
+
+    $task_queue->push($_) for 1..10;
+
+    while ($task_queue->size > 0 || $results->size < 10) {
+        sleep 0.1;
+    }
+
+    $_->stop for @workers;
+
+    print "Results: ", join(", ", map { $results->get($_) } sort { $a <=> $b } $results->keys), "\n";
+
+    $_->join for @workers;
+
+=head2 xclass Overloading
+
+Overloading in tclass is handled through the xclass ecosystem. Here are examples of how to use overloading with tclass:
+
+=head3 Numeric Overloading
+
+    use xclass;
+
+    my $thread = Tc('MyApp', 'NumericThread',
+        scalar => 10
+    );
+
+    print $thread + 5, "\n";  # 15
+    print $thread * 2, "\n";  # 20
+
+=head3 String Overloading
+
+    my $thread = Tc('MyApp', 'StringThread',
+        scalar => "Hello"
+    );
+
+    print "$thread, World!\n";  # Hello, World!
+    print $thread . " Perl!\n";  # Hello Perl!
+
+=head3 Comparison Overloading
+
+    my $thread = Tc('MyApp', 'CompareThread',
+        scalar => 50
+    );
+
+    print "Greater\n" if $thread > 30;
+    print "Equal\n" if $thread == 50;
+
+=head3 Boolean Overloading
+
+    my $thread = Tc('MyApp', 'BoolThread',
+        scalar => 1
+    );
+
+    print "True\n" if $thread;
+    $thread->SCALAR->set(0);
+    print "False\n" unless $thread;
+
+=head2 lclass Utilization
+
+tclass inherits functionality from lclass. Here are examples of how to use lclass features with tclass:
+
+=head3 Custom Error Handling
+
+    my $thread = Tc('MyApp', 'ErrorThread',
+        on_error => sub {
+            my ($self, $error, $method, @args) = @_;
+            warn "Error in method $method: $error";
+        },
+        CODE => sub {
+            my ($self) = @_;
+            $self->throw("Custom error");
+        }
+    );
+
+    $thread->start;
+    $thread->join;
+
+=head3 Method Wrapping
+
+    my $thread = Tc('MyApp', 'WrapThread',
+        CODE => sub {
+            my ($self) = @_;
+            print "Thread running\n";
+        }
+    )->on('before_start',sub {
+        my ($self, @args) = @_;
+        print "Before starting thread\n";
+    })->on('after_stop',sub {
+        my ($self, @args) = @_;
+        print "After stopping thread\n";
+    })->on('error_call',sub {
+        my ($self, @args) = @_;
+        print "Thread Error ",join("\n",@args),"\n";
+    });
+
+    $thread->start;
+    $thread->stop;
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($space, $name, %options)
+
+Creates a new tclass object.
+
+    my $thread = tclass->new('MyApp', 'WorkerThread', %options);
+
+=head2 Thread Control Methods
+
+=head3 start(@args)
+
+Starts the thread with optional arguments.
+
+    $thread->start(@args);
+
+=head3 stop($timeout)
+
+Stops the thread, optionally with a timeout.
+
+    $thread->stop(5);  # Stop with 5-second timeout
+
+=head3 detach()
+
+Detaches the thread.
+
+    $thread->detach;
+
+=head3 join($timeout)
+
+Waits for the thread to finish, optionally with a timeout.
+
+    $thread->join(10);  # Wait for up to 10 seconds
+
+=head2 Status and Information Methods
+
+=head3 status()
+
+Returns the current status of the thread.
+
+    my $status = $thread->status;
+
+=head3 tid()
+
+Returns the thread ID.
+
+    my $tid = $thread->tid;
+
+=head3 running()
+
+Checks if the thread is running.
+
+    if ($thread->running) { ... }
+
+=head3 detached()
+
+Checks if the thread is detached.
+
+    if ($thread->detached) { ... }
+
+=head2 Shared Data Methods
+
+=head3 get($key)
+
+Gets a reference to shared data.
+
+    my $scalar_ref = $thread->get('SCALAR');
+
+=head3 set($key, $value)
+
+Sets a reference to shared data.
+
+    $thread->set('ARRAY', [1, 2, 3]);
+
+=head2 GLOB Accessor Methods
+
+=head3 SCALAR()
+
+Returns the SCALAR component of the shared GLOB.
+
+    my $scalar = $thread->SCALAR;
+
+=head3 ARRAY()
+
+Returns the ARRAY component of the shared GLOB.
+
+    my $array = $thread->ARRAY;
+
+=head3 HASH()
+
+Returns the HASH component of the shared GLOB.
+
+    my $hash = $thread->HASH;
+
+=head3 CODE()
+
+Returns the CODE component of the shared GLOB.
+
+    my $code = $thread->CODE;
+
+=head3 IO()
+
+Returns the IO component of the shared GLOB.
+
+    my $io = $thread->IO;
+
+=head2 Extended Class Methods
+
+=head3 ext($key, $value?)
+
+Gets or sets an extended class.
+
+    my $counter = $thread->ext('counter');
+    $thread->ext('counter', MyCounter->new);
+
+=head2 Thread Control Methods (for use within thread code)
+
+=head3 should_stop()
+
+Checks if the thread should stop.
+
+    while (!$self->should_stop) { ... }
+
+=head3 yield()
+
+Yields control to other threads.
+
+    $self->yield;
+
+=head3 sleep($seconds)
+
+Sleeps for the specified number of seconds (high-resolution).
+
+    $self->sleep(0.1);
+
+=head3 usleep($nanoseconds)
+
+Sleeps for the specified number of nanoseconds.
+
+    $self->usleep(100_000);  # Sleep for 100 microseconds
+
+=head2 Comparison Methods
+
+=head3 equals($other)
+
+Compares with another tclass object for equality.
+
+    if ($thread1->equals($thread2)) { ... }
+
+=head3 compare($other)
+
+Compares with another tclass object.
+
+    my $result = $thread1->compare($thread2);
+
+=head3 hash_code()
+
+Returns a hash code for the tclass object.
+
+    my $hash = $thread->hash_code;
+
+=head1 ERROR HANDLING
+
+tclass uses the error handling mechanisms provided by xclass and lclass. Errors can be caught and handled using eval blocks or try-catch constructs. Additionally, custom error handling can be implemented using the 'on_error' handler:
+
+    my $thread = tclass->new('MyApp', 'ErrorThread',
+        CODE => sub { die "An error occurred" },
+        on_error => sub {
+            my ($self, $error, $method, @args) = @_;
+            warn "Thread error in method $method: $error";
+        }
+    );
+
+The throw() method can be used to raise custom errors:
+
+    $self->throw("Custom error message");
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Detached threads cannot be joined or stopped externally.
+
+=item * Care should be taken when sharing complex data structures between threads.
+
+=item * The 'CODE' and 'IO' components of shared GLOBs have limitations in terms of sharing and serialization.
+
+=item * High-resolution timing functions may have system-dependent precision.
+
+=item * Extended classes should be designed with thread safety in mind.
+
+=back
+
+=head1 CONFIGURATION
+
+tclass configuration is primarily done through the constructor options. Key configuration options include:
+
+=over 4
+
+=item * space: The namespace for the thread (required)
+
+=item * name: The name of the thread (required)
+
+=item * scalar, array, hash, code, io: Initial values for shared GLOB components
+
+=item * on_kill: Custom handler for thread termination
+
+=item * on_error: Custom handler for thread errors
+
+=item * auto_detach: Automatically detach the thread upon starting
+
+=item * lclass: Additional lclass options for debugging, tracing, and method wrapping
+
+=back
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Frequent access to shared data may impact performance due to synchronization overhead.
+
+=item * Using high-resolution sleep functions excessively may increase CPU usage.
+
+=item * Large shared data structures may increase memory usage and affect performance.
+
+=item * Detached threads may have slightly better performance but are harder to manage.
+
+=back
+
+=head1 THREAD SAFETY
+
+tclass is designed to be thread-safe. All public methods use lclass synchronization mechanisms to ensure safe concurrent access and modification of shared data.
+
+=head1 COMPATIBILITY
+
+tclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance. It has been developed and tested primarily on Unix-like systems (Linux, macOS) and Windows.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * threads
+
+=item * threads::shared
+
+=item * Scalar::Util (for type checking)
+
+=item * Time::HiRes (for high-resolution time functions)
+
+=item * lclass (for utility methods and thread-safe operations)
+
+=item * xclass (for handling specific reference types)
+
+=item * gclass (for GLOB-based reference handling and manipulation)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to tclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<gclass>, L<lclass>, L<threads>, L<threads::shared>, L<Time::HiRes>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

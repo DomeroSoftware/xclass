@@ -1,0 +1,482 @@
+=head1 NAME
+
+hclass - Advanced Thread-Safe Hash Manipulation Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The hclass module provides a robust and feature-rich interface for working with
+hash references within the xclass ecosystem. It offers thread-safe operations,
+advanced hash manipulations, and seamless integration with nested data structures.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe hash operations using xclass synchronization
+
+=item * Overloaded operators for intuitive hash manipulation
+
+=item * Advanced utility methods for complex hash operations
+
+=item * Seamless handling of nested data structures
+
+=item * Integration with xclass for type-specific handling of hash elements
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+hclass inherits core functionality from xclass and can be instantiated directly
+or through xclass factory methods. It implements the xclass event system for
+operation tracking and uses xclass for element-wise type handling.
+
+=head2 Thread Safety
+
+All methods in hclass are designed to be thread-safe, utilizing xclass synchronization
+mechanisms through the sync method.
+
+=head2 Performance Considerations
+
+hclass is optimized for both single-threaded and multi-threaded environments.
+It uses efficient handling of nested data structures and lazy initialization of element handlers.
+
+=head2 Extensibility
+
+The class is designed to be easily extended with additional methods and
+supports custom event triggers for all operations through the xclass event system.
+
+=head2 Handling of Circular References
+
+hclass, like other components of the xclass ecosystem, includes sophisticated handling of circular references within hash structures.
+
+- Hash values can reference other hclass objects or any other xclass objects, including self-references.
+- Circular references in nested hash structures are automatically detected and managed.
+- The system ensures proper garbage collection of hclass objects involved in circular references.
+- Complex data structures with circular references can be created and manipulated without user intervention for reference management.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+
+    use hclass;
+
+    # Create a new hclass object
+    my $hash = hclass->new({ a => 1, b => 2, c => 3 });
+
+    # Basic operations
+    $hash->set('d', 4)->delete('a');
+    print $hash->get('b');  # Prints: 2
+
+    # Advanced operations
+    $hash->map(sub { my ($k, $v) = @_; ($k, $v * 2) });
+    print $hash->to_string;  # Prints something like: {b => 4, c => 6, d => 8}
+
+    # Merging hashes
+    my $other = hclass->new({ e => 5, f => 6 });
+    $hash->merge($other);
+
+    # Using overloaded operators
+    my $combined = $hash + { g => 7 };
+    my $intersection = $hash & $other;
+
+    # Iteration
+    $hash->each(sub { my ($k, $v) = @_; print "$k: $v\n" });
+
+=head1 EXAMPLES
+
+=head2 Basic Usage
+
+    my $hash = hclass->new({ foo => 1, bar => 2 });
+    $hash->set('baz', 3);
+    print $hash->get('foo');  # Prints: 1
+    $hash->delete('bar');
+    print $hash->to_string;  # Prints: {foo => 1, baz => 3}
+
+=head2 Overloaded Operators
+
+=head3 Dereference (%{})
+
+    my $hash = hclass->new({ a => 1, b => 2 });
+    my %perl_hash = %{$hash};
+    print $perl_hash{a};  # Prints: 1
+
+=head3 Stringification ("")
+
+    my $hash = hclass->new({ x => 10, y => 20 });
+    print "$hash";  # Prints: {x => 10, y => 20}
+
+=head3 Numeric Context (0+)
+
+    my $hash = hclass->new({ a => 1, b => 2, c => 3 });
+    print 0 + $hash;  # Prints: 3 (size of the hash)
+
+=head3 Boolean Context and Negation (!)
+
+    my $hash = hclass->new({ a => 1 });
+    print "Not empty" if $hash;  # Prints: Not empty
+    print "Empty" if !$hash->new;  # Prints: Empty
+
+=head3 Assignment (=)
+
+    my $hash1 = hclass->new({ a => 1 });
+    my $hash2 = $hash1;
+    $hash2->set('b', 2);
+    print $hash1->to_string;  # Prints: {a => 1, b => 2}
+
+=head3 Equality (==, !=)
+
+    my $hash1 = hclass->new({ a => 1, b => 2 });
+    my $hash2 = hclass->new({ a => 1, b => 2 });
+    my $hash3 = hclass->new({ a => 1, c => 3 });
+    print "Equal" if $hash1 == $hash2;  # Prints: Equal
+    print "Not equal" if $hash1 != $hash3;  # Prints: Not equal
+
+=head3 Comparison (cmp, <=>)
+
+    my $hash1 = hclass->new({ a => 1 });
+    my $hash2 = hclass->new({ b => 2 });
+    print $hash1 cmp $hash2;  # Prints: -1
+    print $hash1 <=> $hash2;  # Prints: -1 (based on size)
+
+=head3 Addition (+)
+
+    my $hash1 = hclass->new({ a => 1, b => 2 });
+    my $hash2 = hclass->new({ b => 3, c => 4 });
+    my $result = $hash1 + $hash2;
+    print $result->to_string;  # Prints: {a => 1, b => 3, c => 4}
+
+=head3 Subtraction (-)
+
+    my $hash1 = hclass->new({ a => 1, b => 2, c => 3 });
+    my $hash2 = hclass->new({ b => 2, c => 3 });
+    my $result = $hash1 - $hash2;
+    print $result->to_string;  # Prints: {a => 1}
+
+=head3 Intersection (&)
+
+    my $hash1 = hclass->new({ a => 1, b => 2, c => 3 });
+    my $hash2 = hclass->new({ b => 2, c => 3, d => 4 });
+    my $result = $hash1 & $hash2;
+    print $result->to_string;  # Prints: {b => 2, c => 3}
+
+=head3 Union (|)
+
+    my $hash1 = hclass->new({ a => 1, b => 2 });
+    my $hash2 = hclass->new({ b => 3, c => 4 });
+    my $result = $hash1 | $hash2;
+    print $result->to_string;  # Prints: {a => 1, b => 3, c => 4}
+
+=head3 Symmetric Difference (^)
+
+    my $hash1 = hclass->new({ a => 1, b => 2, c => 3 });
+    my $hash2 = hclass->new({ b => 2, c => 4, d => 5 });
+    my $result = $hash1 ^ $hash2;
+    print $result->to_string;  # Prints: {a => 1, c => 3, d => 5}
+
+=head2 xclass Integration
+
+=head3 Using xclass Factory Method
+
+    use xclass;
+    my $hash = Hc({ a => 1, b => 2 });  # Creates an hclass object
+
+=head3 Nested Structures with xclass
+
+    my $complex = Hc({
+        array => Ac([1, 2, 3]),
+        hash => Hc({ x => 10, y => 20 }),
+        scalar => Sc(42)
+    });
+    print $complex->get('array')->get(1);  # Prints: 2
+    print $complex->get('hash')->get('x');  # Prints: 10
+    print $complex->get('scalar')->get;  # Prints: 42
+
+=head2 lclass Utilization
+
+=head3 Using lclass Methods
+
+    my $hash1 = hclass->new({ a => 1, b => 2 });
+    $hash1->try(sub {
+        $hash1->set('c', 3);
+        die "Error" if $hash1->size > 3;
+    }, 'set_operation');
+
+
+    my $hash2 = hclass->new({ a => 1, b => 2 })->share;
+    $hash2->sync(sub {
+        $hash2->set('c', 3);
+        die "Error" if $hash2->size > 3;
+    }, 'set_shared_operation');
+
+=head3 Event Handling
+
+    $hash->on('set', sub {
+        my ($self, $key, $value) = @_;
+        print "Set $key to $value\n";
+    });
+    $hash->set('d', 4);  # Triggers the event
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($ref?, %options)
+
+Creates a new hclass object.
+
+    my $hash = hclass->new({ key => 'value' });
+
+=head2 Core Methods
+
+=head3 get($key?)
+
+Retrieves value(s) from the hash.
+
+    my $value = $hash->get('key');
+    my %all = $hash->get();
+
+=head3 set($key, $value)
+
+Sets a value in the hash.
+
+    $hash->set('key', 'new_value');
+
+=head3 delete($key)
+
+Deletes a key-value pair from the hash.
+
+    $hash->delete('key');
+
+=head3 exists($key)
+
+Checks if a key exists in the hash.
+
+    if ($hash->exists('key')) { ... }
+
+=head3 keys()
+
+Returns all keys of the hash.
+
+    my @keys = $hash->keys();
+
+=head3 values()
+
+Returns all values of the hash.
+
+    my @values = $hash->values();
+
+=head3 clear()
+
+Clears the hash.
+
+    $hash->clear();
+
+=head2 Advanced Methods
+
+=head3 each($coderef)
+
+Iterates over the hash.
+
+    $hash->each(sub { my ($k, $v) = @_; print "$k: $v\n" });
+
+=head3 map($coderef)
+
+Applies a function to each key-value pair.
+
+    $hash->map(sub { my ($k, $v) = @_; ($k, $v * 2) });
+
+=head3 grep($coderef)
+
+Filters the hash based on a condition.
+
+    $hash->grep(sub { my ($k, $v) = @_; $v > 10 });
+
+=head3 merge($other_hash)
+
+Merges another hash into this one.
+
+    $hash->merge({ new_key => 'new_value' });
+
+=head3 size()
+
+Returns the number of key-value pairs in the hash.
+
+    my $size = $hash->size();
+
+=head3 is_empty()
+
+Checks if the hash is empty.
+
+    if ($hash->is_empty()) { ... }
+
+=head3 invert()
+
+Inverts the hash (swaps keys and values).
+
+    $hash->invert();
+
+=head3 slice(@keys)
+
+Gets a slice of the hash.
+
+    my %slice = $hash->slice('key1', 'key2');
+
+=head3 modify($coderef)
+
+Modifies the hash using a code reference.
+
+    $hash->modify(sub { my $h = shift; $h->{new_key} = 'new_value' });
+
+=head3 to_string()
+
+Converts the hash to a string representation.
+
+    print $hash->to_string();
+
+=head1 OVERLOADED OPERATORS
+
+hclass overloads the following operators for intuitive hash manipulation:
+
+=over 4
+
+=item * Dereferencing (%{})
+
+=item * Stringification ("")
+
+=item * Numification (0+)
+
+=item * Boolean context
+
+=item * Negation (!)
+
+=item * Assignment (=)
+
+=item * Equality (==, !=)
+
+=item * Comparison (cmp, <=>)
+
+=item * Addition (+)
+
+=item * Subtraction (-)
+
+=item * Intersection (&)
+
+=item * Union (|)
+
+=item * Symmetric Difference (^)
+
+=back
+
+See the EXAMPLES section for usage of these overloaded operators.
+
+=head1 ERROR HANDLING
+
+hclass uses the error handling mechanisms provided by xclass. Errors are thrown using the throw method inherited from xclass. These can be caught and handled using eval blocks or try-catch constructs if you're using a module like Try::Tiny.
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Operations on very large hashes may impact performance due to the overhead of maintaining element handlers.
+
+=item * The overloaded operators create new hclass instances, which may impact performance in tight loops.
+
+=item * Concurrent modifications to the same hash from multiple threads should be carefully managed to avoid race conditions.
+
+=back
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Lazy Initialization: Element handlers are initialized on-demand to minimize overhead.
+
+=item * Efficient Locking: The sync method is used to ensure thread-safe operations while maximizing concurrency.
+
+=item * Overloaded Operators: While convenient, overloaded operators may introduce slight performance overhead compared to direct method calls.
+
+=back
+
+=head1 THREAD SAFETY
+
+hclass is designed to be thread-safe. All public methods use the sync method provided by xclass to ensure safe concurrent access and modification of the underlying hash.
+
+=head1 COMPATIBILITY
+
+hclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * JSON::PP
+
+=item * lclass (for utility methods and thread-safe operations)
+
+=item * xclass (for handling specific reference types)
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to hclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<lclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

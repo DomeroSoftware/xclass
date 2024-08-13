@@ -1,0 +1,503 @@
+=head1 NAME
+
+gclass - Advanced GLOB Reference Manipulation Class for xclass Ecosystem
+
+=head1 TABLE OF CONTENTS
+
+=over 4
+
+=item L</DESCRIPTION>
+
+=item L</SYNOPSIS>
+
+=item L</EXAMPLES>
+
+=item L</METHODS>
+
+=item L</OVERLOADED OPERATORS>
+
+=item L</ERROR HANDLING>
+
+=item L</LIMITATIONS AND CAVEATS>
+
+=item L</CONFIGURATION>
+
+=item L</PERFORMANCE CONSIDERATIONS>
+
+=item L</THREAD SAFETY>
+
+=item L</COMPATIBILITY>
+
+=item L</DEPENDENCIES>
+
+=item L</VERSION>
+
+=item L</SEE ALSO>
+
+=item L</AUTHOR>
+
+=item L</COPYRIGHT AND LICENSE>
+
+=back
+
+=head1 DESCRIPTION
+
+The gclass module provides a robust and feature-rich interface for working with
+GLOB references within the xclass ecosystem. It offers thread-safe operations
+on global variables, including scalars, arrays, hashes, code references, and
+IO handles, with seamless integration into the xclass framework.
+
+Key features include:
+
+=over 4
+
+=item * Thread-safe GLOB reference operations using lclass synchronization
+
+=item * Overloaded operators for intuitive GLOB manipulation
+
+=item * Comprehensive handling of all GLOB components (SCALAR, ARRAY, HASH, CODE, IO)
+
+=item * Support for shared GLOBs across threads
+
+=item * Integration with xclass for type-specific handling of GLOB components
+
+=item * Advanced operations: cloning, merging, comparison
+
+=back
+
+=head2 Integration with xclass Ecosystem
+
+gclass inherits core functionality from lclass and can be instantiated directly
+or through xclass factory methods. It implements the xclass event system for
+operation tracking and utilizes xclass for type-specific handling of GLOB components.
+
+=head2 Thread Safety
+
+All methods in gclass are designed to be thread-safe, with support for shared GLOBs across threads.
+
+=head2 Performance Considerations
+
+gclass is optimized for both single-threaded and multi-threaded environments,
+with efficient handling of GLOB components.
+
+=head2 Extensibility
+
+The class is designed to be easily extended with additional methods and
+supports custom event triggers for all operations.
+
+=head2 Handling of Circular References
+
+gclass, managing GLOB references, incorporates the xclass ecosystem's circular reference handling capabilities.
+
+- GLOB references can safely contain or be contained within other xclass objects without causing reference loops.
+- Circular references involving any combination of scalar, array, hash, or code references within the GLOB are automatically managed.
+- The garbage collection process correctly cleans up gclass objects involved in circular references.
+- Complex data structures involving GLOBs and other xclass objects can be created without manual circular reference management.
+
+=head1 SYNOPSIS
+
+    use strict;
+    use warnings;
+    use gclass;
+
+    # Create a new gclass object
+    my $glob = gclass->new(space => 'main', name => 'my_glob');
+
+    # Set GLOB components
+    $glob->SCALAR(42)
+         ->ARRAY([1, 2, 3])
+         ->HASH({a => 1, b => 2});
+
+    # Access GLOB components
+    my $scalar_value = $glob->SCALAR->get;
+    my $array_ref = $glob->ARRAY;
+    my $hash_ref = $glob->HASH;
+
+    # Clone and merge GLOBs
+    my $clone = $glob->clone('my_clone');
+    $glob->merge($other_glob);
+
+    # Compare GLOBs
+    if ($glob->equals($other_glob)) {
+        print "GLOBs are equal\n";
+    }
+
+=head1 EXAMPLES
+
+=head2 Using Overloaded Operators
+
+=head3 Scalar Dereference
+
+    my $glob = gclass->new(space => 'main', name => 'my_glob');
+    $glob->SCALAR(42);
+
+    # Using overloaded scalar dereference
+    print ${$glob};  # Prints 42
+
+    # Standard class way
+    print $glob->SCALAR->get;  # Prints 42
+
+=head3 Array Dereference
+
+    $glob->ARRAY([1, 2, 3]);
+
+    # Using overloaded array dereference
+    push @{$glob}, 4;  # Adds 4 to the array
+    print join(', ', @{$glob});  # Prints 1, 2, 3, 4
+
+    # Standard class way
+    $glob->ARRAY->push(5);
+    print $glob->ARRAY->join(', ');  # Prints 1, 2, 3, 4, 5
+
+=head3 Hash Dereference
+
+    $glob->HASH({a => 1, b => 2});
+
+    # Using overloaded hash dereference
+    ${$glob}{c} = 3;
+    print ${$glob}{a};  # Prints 1
+
+    # Standard class way
+    $glob->HASH->set('d', 4);
+    print $glob->HASH->get('b');  # Prints 2
+
+=head3 Code Dereference
+
+    $glob->CODE(sub { print "Hello, World!\n" });
+
+    # Using overloaded code dereference
+    &{$glob}();  # Prints "Hello, World!"
+
+    # Standard class way
+    $glob->CODE->call();  # Prints "Hello, World!"
+
+=head3 IO Dereference
+
+    $glob->IO(\*STDOUT);
+
+    # Using overloaded IO dereference
+    print {*{$glob}} "Test\n";  # Prints "Test" to STDOUT
+
+    # Standard class way
+    $glob->IO->print("Test\n");  # Prints "Test" to STDOUT
+
+=head3 Stringification
+
+    $glob->SCALAR("Test String");
+
+    # Using overloaded stringification
+    print "$glob";  # Prints "Test String"
+
+    # Standard class way
+    print $glob->to_string;  # Prints "Test String"
+
+=head3 Numeric Context
+
+    $glob->SCALAR(42);
+
+    # Using overloaded numeric context
+    print $glob + 8;  # Prints 50
+
+    # Standard class way
+    print $glob->SCALAR->get + 8;  # Prints 50
+
+=head3 Boolean Context
+
+    # Using overloaded boolean context
+    if ($glob) {
+        print "GLOB exists\n";
+    }
+
+    # Standard class way
+    if ($glob->exists) {
+        print "GLOB exists\n";
+    }
+
+=head3 Assignment
+
+    my $new_glob = gclass->new(space => 'main', name => 'new_glob');
+    $new_glob = $glob;  # Assigns $glob to $new_glob
+
+=head2 xclass Integration
+
+=head3 Using xclass Factory Method
+
+    use xclass;
+
+    my $glob = Gc('main', 'my_glob');
+    $glob->SCALAR(42);
+
+=head3 Converting Perl GLOB to gclass
+
+    my $perl_glob = \*STDOUT;
+    my $gclass_glob = Xc($perl_glob);
+
+=head3 Using xclass Type-Specific Methods
+
+    $glob->ARRAY(Ac([1, 2, 3]));
+    $glob->HASH(Hc({a => 1, b => 2}));
+
+=head2 lclass Utilization
+
+=head3 Thread-Safe Operations
+
+    use threads;
+    use threads::shared;
+
+    my $shared_glob = gclass->new(space => 'main', name => 'shared_glob', is_shared => 1);
+    $shared_glob->SCALAR(0);
+
+    my @threads = map {
+        threads->create(sub {
+            for (1..1000) {
+                $shared_glob->SCALAR->atomic_add(1);
+            }
+        });
+    } 1..10;
+
+    $_->join for @threads;
+    print ${$shared_glob->SCALAR};  # Should print 10000
+
+=head3 Error Handling
+
+    eval {
+        $glob->throw("An error occurred", 'CUSTOM_ERROR');
+    };
+    if ($@) {
+        print "Caught error: $@\n";
+    }
+
+=head3 Event Triggering
+
+    $glob->on('change', sub {
+        my ($self, $event) = @_;
+        print "GLOB changed: $event->{component}\n";
+    });
+
+    $glob->SCALAR(100);  # Triggers 'change' event
+
+=head1 METHODS
+
+=head2 Constructor
+
+=head3 new($space, $name, %options)
+
+Creates a new gclass object.
+
+    my $glob = gclass->new(space => 'main', name => 'my_glob');
+
+=head2 Core Methods
+
+=head3 set($glob_ref)
+
+Sets the GLOB reference.
+
+    $glob->set(\*main::STDOUT);
+
+=head3 get()
+
+Gets the GLOB reference.
+
+    my $glob_ref = $glob->get();
+
+=head3 exists()
+
+Checks if the GLOB exists.
+
+    if ($glob->exists()) {
+        print "GLOB exists\n";
+    }
+
+=head2 GLOB Component Methods
+
+=head3 SCALAR($value)
+
+Gets or sets the SCALAR component of the GLOB.
+
+    $glob->SCALAR(42);
+    my $scalar_value = $glob->SCALAR->get;
+
+=head3 ARRAY($value)
+
+Gets or sets the ARRAY component of the GLOB.
+
+    $glob->ARRAY([1, 2, 3]);
+    my $array_ref = $glob->ARRAY;
+
+=head3 HASH($value)
+
+Gets or sets the HASH component of the GLOB.
+
+    $glob->HASH({a => 1, b => 2});
+    my $hash_ref = $glob->HASH;
+
+=head3 CODE($value)
+
+Gets or sets the CODE component of the GLOB.
+
+    $glob->CODE(sub { print "Hello, World!\n" });
+    my $code_ref = $glob->CODE;
+
+=head3 IO($value)
+
+Gets or sets the IO component of the GLOB.
+
+    $glob->IO(\*STDOUT);
+    my $io_ref = $glob->IO;
+
+=head2 Advanced Methods
+
+=head3 clone($clone_name)
+
+Creates a clone of the GLOB.
+
+    my $clone = $glob->clone('my_clone');
+
+=head3 merge($other_glob)
+
+Merges another gclass object into this one.
+
+    $glob->merge($other_glob);
+
+=head3 equals($other_glob)
+
+Compares this GLOB with another for equality.
+
+    if ($glob->equals($other_glob)) {
+        print "GLOBs are equal\n";
+    }
+
+=head3 compare($other_glob)
+
+Compares this GLOB with another, returning -1, 0, or 1.
+
+    my $result = $glob->compare($other_glob);
+
+=head3 hash_code()
+
+Returns a hash code for the GLOB.
+
+    my $hash = $glob->hash_code();
+
+=head1 OVERLOADED OPERATORS
+
+gclass overloads the following operators for intuitive GLOB manipulation:
+
+=over 4
+
+=item * Scalar dereference (${}): Returns the SCALAR component
+
+=item * Array dereference (@{}): Returns the ARRAY component
+
+=item * Hash dereference (%{}): Returns the HASH component
+
+=item * Code dereference (&{}): Returns the CODE component
+
+=item * GLOB dereference (*{}): Returns the IO component
+
+=item * Stringification (""): Returns a string representation of the GLOB
+
+=item * Numeric context (0+): Returns the numeric value of the SCALAR component
+
+=item * Boolean context: Returns true if the GLOB exists
+
+=item * Assignment (=): Assigns a new GLOB reference
+
+=back
+
+=head1 ERROR HANDLING
+
+gclass uses the error handling mechanisms provided by lclass. Errors can be thrown using the C<throw> method and caught using eval blocks or try-catch constructs.
+
+=head1 LIMITATIONS AND CAVEATS
+
+=over 4
+
+=item * Care should be taken when manipulating GLOBs that are used elsewhere in the program.
+
+=item * Shared GLOBs may have performance implications in highly concurrent scenarios.
+
+=item * Not all GLOB operations may be available or behave the same way across different Perl versions.
+
+=back
+
+=head1 CONFIGURATION
+
+gclass inherits its configuration options from lclass. Specific options for gclass include:
+
+=over 4
+
+=item * space: The package namespace for the GLOB (default: 'main').
+
+=item * name: The name of the GLOB within the specified namespace.
+
+=item * is_shared: Whether the GLOB should be shared across threads (default: false).
+
+=back
+
+=head1 PERFORMANCE CONSIDERATIONS
+
+=over 4
+
+=item * Shared GLOBs: Using shared GLOBs may introduce some performance overhead due to locking mechanisms.
+
+=item * GLOB Component Access: Direct component access (e.g., SCALAR, ARRAY) is optimized for performance.
+
+=item * Cloning and Merging: These operations may be expensive for large GLOBs.
+
+=item * Thread Safety: The thread-safe design may introduce some overhead in single-threaded scenarios.
+
+=back
+
+=head1 THREAD SAFETY
+
+gclass is designed to be thread-safe. All public methods use lclass synchronization mechanisms to ensure safe concurrent access and modification of GLOB references. The 'is_shared' option allows for GLOBs to be safely shared across threads.
+
+=head1 COMPATIBILITY
+
+gclass requires Perl version 5.10 or higher due to its use of advanced language features and for optimal performance.
+
+=head1 DEPENDENCIES
+
+This module requires the following Perl modules:
+
+=over 4
+
+=item * v5.10 or higher
+
+=item * threads
+
+=item * threads::shared
+
+=item * Scalar::Util
+
+=item * Time::HiRes
+
+=item * lclass
+
+=item * xclass
+
+=back
+
+=head1 VERSION
+
+Version 2.0.0
+
+This documentation refers to gclass version 2.0.0.
+
+=head1 SEE ALSO
+
+L<xclass>, L<lclass>, L<hclass>, L<aclass>, L<sclass>, L<cclass>, L<iclass>, L<rclass>, L<tclass>
+
+=head1 AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
