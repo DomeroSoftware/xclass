@@ -1,0 +1,98 @@
+Changes for gclass package
+
+1.3.0   2024-07-24
+        - Thread-safe operations on all Perl data types
+        - Unified interface for working with glob references
+        - Comprehensive error handling and type checking
+        - Serialization and deserialization support
+        - Type constraints for enhanced data integrity
+        - Atomic operations for complex manipulations
+        - Event system for custom callbacks
+        - Iterators for efficient data traversal
+        - Optimization flags for performance tuning
+        - Profiling capabilities for performance analysis
+        - Cloning and merging of gclass objects
+        - Watching for changes in glob contents
+        - Size calculation of glob contents
+        - Diffing between gclass objects
+        - Versioning and rollback functionality
+        - Custom serialization and deserialization
+        - Weak reference support
+        - Performance monitoring
+
+1.2.1   2024-07-23
+        - Finalized documentation in docs/ directory:
+          * gclass.md
+          * sclass.md
+          * aclass.md
+          * hclass.md
+          * cclass.md
+          * iclass.md
+        - Added detailed explanations of class interactions
+        - Updated main README.md with complete package overview
+        - Added lclass.pm to lib/ directory
+        - Refactored lock, unlock, and locked functions into lclass
+        - Updated other classes to import and use lclass for locking mechanisms
+        - Updated documentation to reflect new locking structure
+        - Created comprehensive Changes file
+        - Reviewed and updated version history to accurately reflect development process
+
+1.2.0   2024-07-22
+        - Created docs/cclass.md and docs/iclass.md
+        - Refined documentation for code reference and I/O operations
+
+1.1.9   2024-07-22
+        - Created docs/hclass.md
+        - Enhanced documentation for hash operations and thread safety
+
+1.1.8   2024-07-22
+        - Created docs/aclass.md
+        - Improved documentation for array operations and atomic manipulations
+
+1.1.7   2024-07-22
+        - Created docs/sclass.md
+        - Enhanced documentation for scalar operations and thread safety
+
+1.1.6   2024-07-22
+        - Created docs/gclass.md
+        - Comprehensive documentation of gclass functionality and usage
+
+1.1.5   2024-07-22
+        - Reviewed and refined overall package structure
+        - Discussed documentation strategy for individual classes
+
+1.1.4   2024-07-22
+        - Implemented test suite for all classes in t/ directory
+        - Added extensive test cases for thread safety and functionality
+        - Fixed minor bugs discovered during testing
+
+1.1.3   2024-07-21
+        - Created POD documentation for all modules in pod/ directory
+        - Enhanced inline comments for better code readability
+
+1.1.2   2024-07-21
+        - Refined API for consistency across all classes
+        - Implemented additional utility methods in each class
+
+1.1.1   2024-07-21
+        - Improved thread safety in gclass symbol table operations
+        - Enhanced performance of aclass and hclass operations
+
+1.1.0   2024-07-21
+        - Fixed critical bugs in locking mechanisms within individual classes
+
+1.0.0   2024-07-20
+        - Initial release of gclass package
+        - Implemented core classes in lib/ directory:
+          * gclass.pm
+          * sclass.pm
+          * aclass.pm
+          * hclass.pm
+          * cclass.pm
+          * iclass.pm
+        - Established basic functionality for glob manipulation
+        - Implemented thread-safe operations for all data types
+        - Added support for symbol table integration
+        - Developed overloaded operators for intuitive usage
+        - Implemented atomic operations and locking capabilities within each class
+        - Established licensing under Perl Artistic License
