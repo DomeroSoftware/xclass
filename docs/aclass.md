@@ -73,17 +73,17 @@ aclass provides robust handling of circular references within array structures. 
 ```perl
 use strict;
 use warnings;
-use aclass;
+use xclass;
 
 # Create a new aclass object
-my $array = aclass->new([1, 2, 3, 4, 5]);
+my $array = Ac([1, 2, 3, 4, 5]);
 
 # Basic operations
 $array->push(6)->unshift(0);
 print $array->join(', ');  # Prints: 0, 1, 2, 3, 4, 5, 6
 
 # Functional operations
-$array->map(sub { $_ * 2 })->grep(sub { $_ > 5 });
+$array->map(sub { $_[0] * 2 })->grep(sub { $_[0] > 5 });
 print $array->join(', ');  # Prints: 6, 8, 10, 12
 
 # Advanced operations
@@ -91,8 +91,8 @@ my $sum = $array->reduce(sub { $a + $b });
 print "Sum: $sum";  # Prints: Sum: 36
 
 # Overloaded operators
-my $a = aclass->new([1, 2, 3]);
-my $b = aclass->new([4, 5, 6]);
+my $a = Ac([1, 2, 3]);
+my $b = Ac([4, 5, 6]);
 my $c = $a + $b;
 print $c->join(', ');  # Prints: 1, 2, 3, 4, 5, 6
 
@@ -112,10 +112,10 @@ while (my $elem = $iter->()) {
 ## Data Processing Pipeline
 
 ```perl
-use aclass;
+use xclass;
 use List::Util qw(sum);
 
-my $readings = aclass->new([23.1, 22.8, 24.3, 23.9, 22.5, 24.1]);
+my $readings = Ac([23.1, 22.8, 24.3, 23.9, 22.5, 24.1]);
 
 my $result = $readings
     ->map(sub { $_ * 1.8 + 32 })  # Convert Celsius to Fahrenheit
@@ -131,9 +131,9 @@ printf "Average temperature: %.1f°C\n", $avg;
 ## Custom Sorting and Filtering
 
 ```perl
-use aclass;
+use xclass;
 
-my $people = aclass->new([
+my $people = Ac([
     { name => "Alice", age => 30 },
     { name => "Bob", age => 25 },
     { name => "Charlie", age => 35 },
@@ -156,9 +156,9 @@ print "People over 30: " . $over_30->map(sub { $_->{name} })->join(", ") . "\n";
 ## Dynamic Array Manipulation
 
 ```perl
-use aclass;
+use xclass;
 
-my $dynamic_array = aclass->new([1, 2, 3, 4, 5]);
+my $dynamic_array = Ac([1, 2, 3, 4, 5]);
 
 # Remove even numbers and double odd numbers
 $dynamic_array->foreach(sub {
@@ -181,7 +181,7 @@ print "Modified array: " . $dynamic_array->join(", ") . "\n";
 Creates a new aclass object.
 
 ```perl
-my $array = aclass->new([1, 2, 3]);
+my $array = Ac([1, 2, 3]);
 ```
 
 ## Core Methods
@@ -309,12 +309,36 @@ Reduces the array to a single value.
 my $sum = $array->reduce(sub { $a + $b });
 ```
 
-### foreach($coderef)
+### each($coderef)
 
 Iterates over array elements.
 
 ```perl
-$array->foreach(sub { print "$_ " });
+$array->each(sub { print "$_[0] " });
+```
+
+### each_with_index($coderef)
+
+Iterates over array elements.
+
+```perl
+$array->each_with_index(sub { my ($val,$index)=@_; print "$val \@ $index \n" });
+```
+
+### each_reverse($coderef)
+
+Iterates over array elements.
+
+```perl
+$array->each_reverse(sub { print "$_[0] \n" });
+```
+
+### each_reverse_index($coderef)
+
+Iterates over array elements.
+
+```perl
+$array->each_reverse_index(sub { my ($val,$index)=@_; print "$val \@ $index \n" });
 ```
 
 ### first($coderef)
@@ -322,7 +346,7 @@ $array->foreach(sub { print "$_ " });
 Finds the first element matching a condition.
 
 ```perl
-my $first_even = $array->first(sub { $_ % 2 == 0 });
+my $first_even = $array->first(sub { $_[0] % 2 == 0 });
 ```
 
 ### last($coderef)
@@ -330,7 +354,7 @@ my $first_even = $array->first(sub { $_ % 2 == 0 });
 Finds the last element matching a condition.
 
 ```perl
-my $last_odd = $array->last(sub { $_ % 2 != 0 });
+my $last_odd = $array->last(sub { $_[0] % 2 != 0 });
 ```
 
 ## Mathematical Methods
@@ -427,8 +451,8 @@ aclass overloads the following operators for intuitive array manipulation:
 Examples of overloaded operator usage:
 
 ```perl
-my $a = aclass->new([1, 2, 3]);
-my $b = aclass->new([4, 5, 6]);
+my $a = Ac([1, 2, 3]);
+my $b = Ac([4, 5, 6]);
 
 # Addition
 my $c = $a + $b;  # [1, 2, 3, 4, 5, 6]
