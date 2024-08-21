@@ -936,6 +936,8 @@ sub listen {
 #
 # Example use:
 #
+#   use xclass;
+#
 #   Ic()->accept('8080',sub {
 #       my ($server,$client)=@_;
 #       Cc(sub {

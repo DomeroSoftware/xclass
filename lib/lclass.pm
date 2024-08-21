@@ -86,7 +86,7 @@ use Log::Log4perl;
 use Devel::Size qw(total_size);
 use Devel::Cycle;
 
-use gerr qw(:control);
+#use gerr qw(:control);
 
 our $VERSION = '2.0.0';
 
@@ -200,16 +200,41 @@ sub share_it {
     return $self if ($self->_shared);
 
     $self->{sharing} //= 0; $self->{sharing}++;
-    if ($self->{sharing} == 1) { # only share the first loop
-        if ($self->{is} eq 'scalar')    { share(${$self->{scalar}}); $self->{scalar} = shared_clone($self->{scalar}); $self->{is_shared}=1; }
-        elsif ($self->{is} eq 'array')  { share(@{$self->{array}}); $self->{array} = shared_clone($self->{array}); $self->{is_shared}=1; }
-        elsif ($self->{is} eq 'hash')   { share(%{$self->{hash}}); $self->{hash} = shared_clone($self->{hash}); $self->{is_shared}=1; }
-        elsif ($self->{is} eq 'code')   { $self->{code} = $self->{code}; $self->{is_shared}=1; }
+    my $ref = $self->_ref;
+    #if ($self->{sharing} == 1) { # only share the first loop
+        if ($self->{is} eq 'scalar')    {
+            if (!is_shared($self->{scalar})) {
+                share(${$self->{scalar}});
+                #$self->{scalar} = shared_clone($self->{scalar});
+                $self->{is_shared}=1; 
+            }
+        }
+        elsif ($self->{is} eq 'array')  {
+            if (!is_shared($self->{array})) {
+                #share(@{$self->{array}});
+                $self->{array} = shared_clone($self->{array});
+                $self->{is_shared}=1; 
+            }
+        }
+        elsif ($self->{is} eq 'hash')   {
+            if (!is_shared($self->{hash})) {
+                #share(%{$self->{hash}});
+                $self->{hash} = shared_clone($self->{hash});
+                $self->{is_shared}=1; 
+            }
+        }
+        elsif ($self->{is} eq 'code')   { 
+            #$self->{code} = $self->{code}; 
+            $self->{is_shared}=1; 
+        }
         elsif ($self->{is} eq 'io')     { 
-            $self->{io} = ref($self->{io}) eq 'GLOB' ? $self->{io} : shared_clone($self->{io}); 
+            $self->{io} = ref($self->{io}) eq 'GLOB' ? $self->{io} : shared_clone($self->{io});
             $self->{is_shared}=1;
         }
-        elsif ($self->{is} eq 'ref')    { $self->{ref} = shared_clone($self->{ref}); $self->{is_shared}=1; }
+        elsif ($self->{is} eq 'ref')    { 
+            $self->{ref} = shared_clone($self->{ref}); 
+            $self->{is_shared}=1; 
+        }
         elsif ($self->{is} eq 'glob')   { 
             #$self->{glob} = shared_clone(\*{$self->{glob}});
             $self->{scalar}->share_it if defined $self->{scalar};
@@ -217,17 +242,16 @@ sub share_it {
             $self->{hash}->share_it if defined $self->{hash};
             $self->{code}->share_it if defined $self->{code};
             $self->{io}->share_it if defined $self->{io};
+            $self->{is_shared}=1;
         }
         else { $self->throw("Cannot make $self->{is} shared", 'SHARE_ERROR') }
-
-        $self->{is_shared}=1;
 
         $self->_init();
 
         $self->trigger('after_share_it');
-    }else{
-        print STDOUT "Blocked Sharing $self->{sharing}\n";
-    }
+    #}else{
+    #    print STDOUT "Blocked Sharing $self->{sharing}\n";
+    #}
     delete $self->{sharing};
     return $self;
 }

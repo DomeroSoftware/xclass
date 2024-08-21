@@ -290,6 +290,7 @@ sub join {
         } else {
             $self->{thread}->join();
         }
+        $self->status('finished');
         return $self;
     }, 'join', $timeout);
 }

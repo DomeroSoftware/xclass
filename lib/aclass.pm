@@ -455,6 +455,39 @@ sub each {
     }, 'each');
 }
 
+sub each_reverse {
+    my ($self, $coderef) = @_;
+    return $self->sync(sub {
+        $self->_validate_coderef($coderef);
+        for (my $index = $#{$self->{array}}; $index >= 0; $index--) {
+            $coderef->($self->{array}->[$index]);
+        }
+        return $self;
+    }, 'each_reverse');
+}
+
+sub each_with_index {
+    my ($self, $coderef) = @_;
+    return $self->sync(sub {
+        $self->_validate_coderef($coderef);
+        for my $index (0..$#{$self->{array}}) {
+            $coderef->($self->{array}->[$index],$index);
+        }
+        return $self;
+    }, 'each_with_index');
+}
+
+sub each_reverse_index {
+    my ($self, $coderef) = @_;
+    return $self->sync(sub {
+        $self->_validate_coderef($coderef);
+        for (my $index = $#{$self->{array}}; $index >= 0; $index--) {
+            $coderef->($self->{array}->[$index],$index);
+        }
+        return $self;
+    }, 'each_reverse_index');
+}
+
 sub first {
     my ($self, $coderef) = @_;
     return $self->sync(sub {

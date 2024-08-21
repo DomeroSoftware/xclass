@@ -19,8 +19,6 @@
 # - rclass (General Reference Manipulation): Directive: Provide a unified interface for manipulating general references, ensuring type-specific handling and thread-safety for reference operations not covered by other specialized classes.
 # - gclass (GLOB Reference Manipulation): Directive: Implement thread-safe operations for GLOB references, offering type-specific access methods and integration with other xclass components.
 # - tclass (Thread Control): Directive: Offer comprehensive, thread-safe management for individual threads, utilizing gclass for named thread references and integrating with xclass locking mechanisms.
-# * pclass (Thread Pool Management): Directive: Implement an efficient thread pool management system, building upon tclass for individual thread control and offering advanced concurrent task distribution.
-# * dclass (Database Interface): Directive: Provide a thread-safe database interface, abstracting various database operations and integrating seamlessly with other xclass components.
 #
 # Key Features and Responsibilities of xclass:
 # 1. Class Registration and Management:
