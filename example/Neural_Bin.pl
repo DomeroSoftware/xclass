@@ -1,124 +1,165 @@
-# Neural_Bin.pl
-
 use strict;
 use warnings;
+use List::Util qw(sum);
+use threads;
+use threads::shared;
+
+my $last_epoch :shared = 0;
 
 sub worker_function {
     my ($self) = @_;
-    my $nn = ${Neural::Network};  # Access the main neural network object
+    my $nn = ${${*Neural::Network}};
+    
+    print STDOUT "Worker Neural::Network : `".$self->namespace."`                              \n";
+    
     my $epochs = $nn->HASH->get('epochs');
     my $learning_rate = $nn->HASH->get('learning_rate');
-    my $training_data = $nn->HASH->get('training_data');
+    my $training_data = $nn->HASH->get('training')->{data};
     my $num_threads = $nn->HASH->get('num_threads');
+    my $last_error = undef;
+    my $last_progress = 0;
 
-    for my $epoch (1 .. $epochs / $num_threads) {
-        $training_data->each(sub {
-            my ($data) = @_;
+    {
+        my $total_error = 0; my $i=0;
+        for my $data (@$training_data) {
             my ($func, $input, $target) = @$data;
-            my $output = $nn->forward_pass($func, $input);
-            $nn->backward_pass($func, $input, $output, $target, $learning_rate);
-        });
-
-        if ($epoch % 250 == 0) {
-            my $error = $nn->calculate_error();
-            print "Worker " . $self->name . ", Epoch $epoch, Error: $error\n";
+            my $output = forward_pass($func, $input);
+            $total_error += ($output - $target->[0]) ** 2;
+            backward_pass($func, $input, $target);
+            $i++;
         }
+        my $error = $total_error / (2 * scalar(@$training_data));
+        lock($last_epoch);
+        $last_epoch = $error;
+        $last_error = $error;
+        print STDOUT $self->namespace." Epoch 0, Error: $error, Learning-Rate: $learning_rate                 \n";
+    }
+
+    my ($total_error,$error,$i);
+    for my $epoch (1 .. $epochs / $num_threads) {
+        $total_error = 0; $i=0;
+        for my $data (@$training_data) {
+            my ($func, $input, $target) = @$data;
+            my $output = forward_pass($func, $input);
+            $total_error += ($output - $target->[0]) ** 2;
+            backward_pass($func, $input, $target);
+            print STDOUT $self->namespace." Training ($epoch:$i), Function: `$func`, input [".join(', ',@$input)."] Target [".join(', ',@$target)."]                             \r" if $epoch % 1 == 0 && $i % 3 == 0;
+            $i++;
+        }
+        
+        $error = $total_error / (2 * scalar(@$training_data));
+        if ($epoch % 10 == 0) {
+            lock($last_epoch);
+            my $progress = (defined $last_error ? $last_error - $error : 0);
+            my $new_progress = $progress - $last_progress;
+            $last_progress = $progress;
+            $last_error = $error;
+            if ($last_epoch < $epoch) {
+                $last_epoch = $epoch;
+                print STDOUT $self->namespace." Epoch $epoch, Error: $error, Learning-Rate: $learning_rate, Progress: $progress, Diff: $new_progress                 \n";
+            }
+        }
+        #$learning_rate *= 0.72 if ($epoch % 100 == 0);
+        $self->yield;
     }
 }
 
 sub forward_pass {
-    my ($nn, $func, $input) = @_;
-    my $activation = [@$input, function_to_number($func)];
-    $nn->ARRAY->each(sub {
-        my ($weight) = @_;
-        $activation = [map {
-            my $sum = 0;
-            $sum += $activation->[$_] * $weight->[$_][$_] for 0..$#$activation;
-            1 / (1 + exp(-$sum))
-        } 0..$#{$weight->[0]}];
+    my ($func, $inputs) = @_;
+    my $nn = ${${*Neural::Network}};
+    
+    my @activations = (@$inputs, function_to_number($func), 1);
+    
+    $nn->ARRAY->each_with_index(sub {
+        my ($layer, $index) = @_;
+        my @new_activations;
+        for my $neuron (@$layer) {
+            my $sum = $neuron->[0];  # Bias
+            for my $i (0 .. $#activations) {
+                $sum += $neuron->[$i+1] * $activations[$i];
+            }
+            push @new_activations, 1 / (1 + exp(-$sum));
+        }
+        @activations = @new_activations;
     });
-    return $activation->[0];
+    
+    return $activations[0];
 }
 
 sub backward_pass {
-    my ($nn, $func, $input, $output, $target, $learning_rate) = @_;
+    my ($func, $inputs, $target) = @_;
+    my $nn = ${${*Neural::Network}};
     
-    my @layer_outputs = ([@$input, function_to_number($func)]);
-    my @layer_inputs = ();
-    
-    # Forward pass to store layer outputs and inputs
-    $nn->ARRAY->each(sub {
-        my ($weight) = @_;
-        my $layer_input = [@{$layer_outputs[-1]}, 1];  # Add bias
-        push @layer_inputs, $layer_input;
-        
-        my $layer_output = [map {
-            my $sum = 0;
-            $sum += $layer_input->[$_] * $weight->[$_][$_] for 0..$#$layer_input;
-            1 / (1 + exp(-$sum))
-        } 0..$#{$weight->[0]}];
-        
-        push @layer_outputs, $layer_output;
+    # Forward pass
+    my @layer_activations = ([@$inputs, function_to_number($func), 1]);
+    $nn->ARRAY->each_with_index(sub {
+        my ($weights, $index) = @_;
+        my @new_activations;
+        for my $neuron (@{$weights}) {
+            my $sum = $neuron->[0];  # Bias
+            for my $i (0 .. $#{$layer_activations[-1]}) {
+                $sum += $neuron->[$i+1] * $layer_activations[-1][$i];
+            }
+            push @new_activations, 1 / (1 + exp(-$sum));
+        }
+        push @layer_activations, \@new_activations;
     });
     
-    # Calculate output layer error
-    my $output_error = [map { $layer_outputs[-1][$_] - $target->[$_] } 0..$#{$layer_outputs[-1]}];
-    
-    # Backpropagate the error
-    my @deltas = ($output_error);
-    $nn->ARRAY->reverse->each_with_index(sub {
-        my ($weight, $l) = @_;
-        my $prev_layer_output = $layer_outputs[$#{$layer_outputs} - $l - 1];
-        my $layer_input = $layer_inputs[$#{$layer_inputs} - $l];
-        
-        # Calculate delta for this layer
-        my $delta = [map {
-            $deltas[0][$_] * $layer_outputs[-$l-1][$_] * (1 - $layer_outputs[-$l-1][$_])
-        } 0..$#{$layer_outputs[-$l-1]}];
-        
-        # Update weights
-        for my $i (0..$#$layer_input) {
-            for my $j (0..$#$delta) {
-                $weight->[$i][$j] -= $learning_rate * $delta->[$j] * $layer_input->[$i];
+    # Backward pass
+    my @deltas;
+    $nn->ARRAY->each_reverse_index(sub {
+        my ($weights, $i) = @_;
+        my @layer_deltas;
+        if ($i == $#{$nn->ARRAY->get()}) {
+            # Output layer
+            my $output = $layer_activations[-1][0];
+            push @layer_deltas, $output * (1 - $output) * ($target->[0] - $output);
+        } else {
+            # Hidden layers
+            for my $j (0 .. $#{$layer_activations[$i+1]}) {
+                my $error = 0;
+                for my $k (0 .. $#{$nn->ARRAY->get($i+1)}) {
+                    $error += $deltas[0][$k] * $nn->ARRAY->get($i+1)->[$k][$j+1];
+                }
+                my $output = $layer_activations[$i+1][$j];
+                push @layer_deltas, $output * (1 - $output) * $error;
             }
         }
-        
-        # Calculate delta for previous layer (excluding bias)
-        if ($l < $nn->ARRAY->size - 1) {
-            my $prev_delta = [map {
-                my $sum = 0;
-                $sum += $delta->[$_] * $weight->[$_][$_] for 0..$#$delta;
-                $sum * $prev_layer_output->[$_] * (1 - $prev_layer_output->[$_])
-            } 0..$#{$prev_layer_output}-1];
-            unshift @deltas, $prev_delta;
+        unshift @deltas, \@layer_deltas;
+    });
+    
+    # Update weights
+    $nn->ARRAY->each_with_index(sub {
+        my ($weights, $i) = @_;
+        for my $j (0 .. $#{$weights}) {
+            $weights->[$j][0] += $nn->HASH->get('learning_rate') * $deltas[$i][$j];  # Update bias
+            for my $k (0 .. $#{$layer_activations[$i]}) {
+                $weights->[$j][$k+1] += $nn->HASH->get('learning_rate') * $deltas[$i][$j] * $layer_activations[$i][$k];
+            }
         }
     });
+    
+    return $layer_activations[-1][0];
 }
 
-sub calculate_error {
-    my ($self) = @_;
-    my $error = 0;
-    
-    my $training_data = $self->HASH->get('training_data');
-    
-    $training_data->each(sub {
-        my ($data) = @_;
-        my ($func, $input, $target) = @$data;
-        my $output = $self->forward_pass($func, $input);
-        $error += ($output - $target->[0]) ** 2;
-    });
-    
-    return $error / (2 * $training_data->size);  # Mean Squared Error
+sub activate {
+    my ($x, $is_output) = @_;
+    return $is_output ? 1 / (1 + exp(-$x)) : ($x > 0 ? $x : 0);  # ReLU for hidden, sigmoid for output
+}
+
+sub activate_derivative {
+    my ($x, $is_output) = @_;
+    return $is_output ? $x * (1 - $x) : ($x > 0 ? 1 : 0);  # Derivative of ReLU for hidden, sigmoid for output
 }
 
 sub function_to_number {
+    my $nn = ${${*Neural::Network}};
+    my $training = $nn->HASH->get('training');
+    #print STDOUT "Training data: $training\n";
     my ($func) = @_;
-    my %func_map = ('XOR' => 0, 'AND' => 1, 'NXOR' => 2, 'NAND' => 3);
-    if (exists $func_map{$func}) {
-        return $func_map{$func} / 3;  # Normalize to [0, 1]
-    } else {
+    return exists $training->{map}{$func} ?
+        $training->{map}{$func} / (1+$#{[keys %{$training->{map}}]}) :
         die "Unknown function: $func";
-    }
 }
 
 1;

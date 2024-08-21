@@ -16,8 +16,8 @@ our $VERSION = '1.0.0';
 sub start {
     my (%options) = @_;
     my $serv = Tc('Serv', undef, $options{type}, 
-        array => &share([]),
-        hash => &share({
+        ARRAY => &share([]),
+        HASH => &share({
             port => $options{port},
             type => $options{type},
             ssl_cert => $options{ssl_cert},
@@ -47,7 +47,7 @@ sub start {
             start_time => time(),
 
         }),
-        code => sub {
+        CODE => sub {
             my ($serv) = @_;
             my $port = $serv->HASH->get('port');
             my $type = $serv->HASH->get('type');
@@ -75,12 +75,12 @@ sub start {
                     $id => &share({
                         sock => $sock, 
                         thread => Tc('Serv::Client', $id,
-                            hash => share({
+                            HASH => share({
                                 serv => $serv,
                                 id => $id
                                 sock => $sock
                             }),
-                            code => sub {
+                            CODE => sub {
                                 my ($client)=@_;
                                 my $id = $client->HASH->get('id');
                                 my $sock = $client->HASH->get('sock');
@@ -147,7 +147,7 @@ sub start {
                                 $sock->close();
                                 $clients->delete($client_id);
                             }
-                        )->start()->detach())
+                        )->start->detach)
                     }
                 );
             }

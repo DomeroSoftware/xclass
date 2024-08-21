@@ -1,3 +1,115 @@
+
+use lib qw(../lib .);
+use strict;
+use warnings;
+use xclass;
+use threads;
+use threads::shared;
+use Storable qw(store retrieve);
+
+$| = 1;
+
+sub initialize_weights {
+    my $nn = ${${*Neural::Network}};  # Access the main neural network object
+    my @layers = @{$nn->HASH->get('training')->{layers}};
+    my @weights;
+
+    for my $i (0 .. $#layers - 1) {
+        my @layer;
+        for my $j (0 .. $layers[$i+1] - 1) {
+            my @neuron = map { rand() * 2 - 1 } 0 .. $layers[$i] + 1;  # +1 for bias
+            push @layer, \@neuron;
+        }
+        push @weights, \@layer;
+    }
+
+    $nn->ARRAY->set(\@weights);
+    #print STDOUT $nn->ARRAY->serialize."\n";
+}
+
+sub load_weights {
+    my $nn = ${${*Neural::Network}};  # Access the main neural network object
+    my $base_file = $nn->HASH->get->{base_file};
+    my $filename = "./${base_file}.dat";
+    open my $fh, '<', $filename or die "Could not open file '$filename' $!";
+    my $json = do { local $/; <$fh> };
+    close $fh;
+    $nn->ARRAY->deserialize($json)->share_it;
+    print "Loaded weights from $filename.\n";
+}
+
+sub save_weights {
+    my $nn = ${${*Neural::Network}};  # Access the main neural network object
+    my $base_file = $nn->HASH->get->{base_file};
+    my $filename = "./${base_file}.dat";
+    open my $fh, '>', $filename or die "Could not open file '$filename' $!";
+    print $fh $nn->ARRAY->serialize;
+    close $fh;
+    print "Saved weights to $filename.\n";
+}
+
+sub network_function {
+    my $nn = ${${*Neural::Network}};  # Access the main neural network object
+    
+    #print STDOUT $nn->HASH->serialize."\n";
+
+    my $base_file = $nn->HASH->get->{base_file};
+
+    my $training_code = "./${base_file}.pl";
+    require $training_code;
+
+    # Initialize or load weights
+    my $weights_file = "./${base_file}.dat";
+    if (-e $weights_file && !$nn->HASH->get('random_init')) {
+        load_weights();
+    } else {
+        initialize_weights();
+    }
+
+    print "Initialized weights:\n";
+    $nn->ARRAY->each_with_index(sub {
+        my ($layer_weights, $layer_index) = @_;
+        print STDOUT "Layer $layer_index weights:\n";
+        for my $neuron_index (0 .. $#$layer_weights) {
+            print STDOUT "  Neuron $neuron_index: " . join(", ", @{$layer_weights->[$neuron_index]}) . "\n";
+        }
+    });
+
+    # Create and run worker threads
+    my $num_threads = $nn->HASH->get('num_threads') // 4;
+    my @workers = map { Tc('Neural', "Worker$_", CODE => \&worker_function) } 1..$num_threads;
+
+    $_->start for @workers;
+    $_->join for @workers;
+
+    # Save weights after training
+    save_weights();
+
+    # Test the trained network
+    my $training = $nn->HASH->get('training');
+    for (my $i=0; $i <= $#{$training->{data}}; $i++) {
+        my ($func, $input, $expected) = @{$training->{data}->[$i]};
+        my $output = forward_pass($func, $input);
+        printf "Function: %s, Input: [%s], Expected: %.3f, Output: %.3f\n",
+               $func, join(', ', @$input), $expected->[0], $output;
+    };
+}
+
+our @weights :shared = ();
+
+my $nn = Tc('Neural', 'Network', CODE => \&network_function)->link_it;
+$nn->HASH({
+    epochs => 20000,
+    last_epoch => 0,
+    learning_rate => 0.01683,
+    num_threads => 8,
+    base_file => 'Neural_Bin',
+    training => require 'Neural_Bin.Training',
+})->share_it;
+$nn->ARRAY([])->share_it;
+
+$nn->start->join for (0..9);
+
 =pod
 
 =head1 NAME
@@ -98,246 +210,5 @@ This example illustrates how xclass simplifies implementing complex, concurrent 
 
 =cut
 
-use strict;
-use warnings;
-use xclass;
-use threads;
-use threads::shared;
-use Storable qw(store retrieve);
-
-sub network_function {
-    my ($self) = @_;
-    
-    $self->SCALAR->set(\$self);  # Set GLOB scalar reference
-
-    my $base_file = $self->HASH->get('base_file');
-    my $training_file = "${base_file}.Training";
-    my $weights_file = "${base_file}.dat";
-    my $training_code = "${base_file}.pl";
-
-    require $training_code;
-
-    # Load training and test data
-    $self->throw("File not Found `$training_file`") if (!-f $training_file);
-    $self->HASH->set('training_data', Ac(require $training_file)->share_it);
-
-    # Initialize or load weights
-    if (-e $weights_file && !$self->HASH->get('random_init')) {
-        $self->ARRAY->set(retrieve($weights_file));
-        print "Loaded weights from $weights_file.\n";
-    } else {
-        my $layers = $self->HASH->get('layers');
-        for my $i (0 .. $#$layers - 1) {
-            my $weight = Ac([map { [map { rand() * 2 - 1 } 1..$layers->[$i+1]] } 1..($layers->[$i]+1)])->share_it;
-            $self->ARRAY->push($weight);
-        }
-        print "Initialized weights randomly.\n";
-    }
-
-    # Create and run worker threads
-    my $num_threads = $self->HASH->get('num_threads') // 4;
-    my @workers = map {
-        Tc('Neural', "Worker$_", 
-            hash => $self->HASH,
-            array => $self->ARRAY,
-            code => \&worker_function
-        )
-    } 1..$num_threads;
-
-    $_->start for @workers;
-    $_->join for @workers;
-
-    # Save weights after training
-    store($self->ARRAY->get, $weights_file);
-    print "Saved weights to $weights_file.\n";
-
-    # Test the trained network
-    $self->HASH->get('training_data')->each(sub {
-        my ($test) = @_;
-        my ($func, $input, $expected) = @{$test};
-        my $output = $self->forward_pass($func, $input);
-        printf "Function: %s, Input: [%s], Expected: %.3f, Output: %.3f\n",
-               $func, join(', ', @$input), $expected->[0], $output;
-    });
-}
-
-Tc('Neural', 'Network',
-    hash => Hc({
-        layers => [3, 5, 1],
-        learning_rate => 0.1,
-        epochs => 20000,
-        random_init => 0,
-        num_threads => 8,
-        base_file => 'Neural_Bin',
-    })->share_it,
-    array => Ac([])->share_it,
-    code => \&network_function
-)->start->join;
-
 ################################################################################
-
-=head
-## Simple Language model
-# i think you need to learn to dream as an evolving AI to keep updating everything 
-# you learn in a day to add to the patterns to get to an understanding of continuas 
-# training like we have for every day.. 
-
-use xclass;
-use AI::NNFlex;  # Hypothetical neural network library
-
-my $language_model = Tc('Language', 'Model',
-    hash => Hc({
-        vocab_size => 50000,
-        embedding_dim => 300,
-        hidden_dim => 512,
-        num_layers => 2,
-        learning_rate => 0.001,
-        batch_size => 64,
-        epochs => 10,
-        training_data => Ac([]),  # This would be filled with actual text data
-    }),
-    code => sub {
-        my ($self) = @_;
-        
-        # Initialize model (this is pseudocode, actual implementation would be more complex)
-        my $model = AI::NNFlex::LSTM->new(
-            input_dim => $self->HASH->get('vocab_size'),
-            embedding_dim => $self->HASH->get('embedding_dim'),
-            hidden_dim => $self->HASH->get('hidden_dim'),
-            num_layers => $self->HASH->get('num_layers'),
-        );
-
-        # Training loop
-        for my $epoch (1 .. $self->HASH->get('epochs')) {
-            my $total_loss = Sc(0);
-            
-            # Process data in parallel batches
-            Tc('Training', 'Epoch' . $epoch, 
-                array => $self->HASH->get('training_data'),
-                scalar => $total_loss,
-                code => sub {
-                    my ($training) = @_;
-                    $training->ARRAY->each_batch($self->HASH->get('batch_size'), sub {
-                        my ($batch) = @_;
-                        my $loss = $model->train_batch($batch);
-                        $total_loss->sync(sub { $_[0]->inc($loss) });
-                    });
-                }
-            )->start->join;
-
-            print "Epoch $epoch, Loss: " . $total_loss->get . "\n";
-        }
-
-        # Save the trained model
-        $self->HASH->set('trained_model', $model);
-    }
-)->start;
-
-# Generate text using the trained model
-my $generated_text = $language_model->sync(sub {
-    my ($lm) = @_;
-    my $model = $lm->HASH->get('trained_model');
-    return $model->generate("Once upon a time", max_length => 100);
-});
-
-print "Generated text: $generated_text\n";
-
-
-################################################################################
-
-use AI::CodeDreamer;  # Hypothetical AI module for code generation and analysis
-
-my $ai_coder = AI::CodeDreamer->new(
-    language => 'Perl',
-    libraries => ['xclass', 'DBI', 'Mojolicious'],  # Libraries to consider
-);
-
-# Generate code based on a specification
-my $spec = "Create a multi-threaded web scraper using xclass that fetches and parses web pages concurrently, storing results in a SQLite database";
-
-my $generated_code = $ai_coder->generate_code($spec);
-
-# Perform static analysis
-my $analysis_result = $ai_coder->static_analysis($generated_code);
-if ($analysis_result->{errors}) {
-    $generated_code = $ai_coder->refine_code($generated_code, $analysis_result);
-}
-
-# Virtual execution
-my $execution_result = $ai_coder->virtual_execute($generated_code);
-if ($execution_result->{errors}) {
-    $generated_code = $ai_coder->refine_code($generated_code, $execution_result);
-}
-
-# Generate and run test cases
-my $test_results = $ai_coder->run_tests($generated_code);
-if ($test_results->{failed_tests}) {
-    $generated_code = $ai_coder->refine_code($generated_code, $test_results);
-}
-
-# Output the final, tested, and functional code
-print $generated_code;
-
-# Learn from this experience
-$ai_coder->learn_from_session();
-
-
-################################################################################
-
-use AI::CodeDreamer;
-
-my $ai_coder = AI::CodeDreamer->new(
-    language => 'Perl',
-    interactive => 1,  # Enable interactive mode
-);
-
-my $spec = "Create a multi-threaded web scraper using xclass";
-
-my $project = $ai_coder->new_project($spec);
-
-# Interactive clarification
-$project->clarify(sub {
-    my ($question, $answer_callback) = @_;
-    print "AI: $question\n";
-    my $answer = <STDIN>;
-    chomp $answer;
-    $answer_callback->($answer);
-});
-
-# Some example questions the AI might ask:
-# "What specific websites do you want to scrape?"
-# "How should the scraped data be stored?"
-# "Are there any rate limiting considerations?"
-# "Do you need to handle JavaScript-rendered content?"
-
-# Knowledge expansion
-if ($project->needs_learning) {
-    my $resource = $project->request_learning_resource;
-    print "AI needs to learn about: $resource\n";
-    print "Please provide a brief explanation or a link to documentation:\n";
-    my $explanation = <STDIN>;
-    $project->learn($resource, $explanation);
-}
-
-# Generate initial code
-my $code = $project->generate_code;
-
-# Feedback loop
-while (1) {
-    print "Here's the current code:\n$code\n";
-    print "Is this satisfactory? (yes/no)\n";
-    my $feedback = <STDIN>;
-    chomp $feedback;
-    last if $feedback eq 'yes';
-    
-    print "What improvements are needed?\n";
-    my $improvements = <STDIN>;
-    $code = $project->refine_code($code, $improvements);
-}
-
-# Learn from the entire interaction
-$ai_coder->learn_from_session($project);
-
-print "Final code:\n$code\n";
-
-=cut
+# EOF Neural.pl (C) 2024, OnEhIppY, Domero Software <domerosoftware@gmail.com>

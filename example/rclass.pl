@@ -35,7 +35,7 @@ $array_ref->apply(sub { @{$_[0]->get} = map { $_ * 2 } @{$_[0]->get} });
 print "Doubled array: ", join(", ", @{$array_ref->get}), "\n";
 
 $hash_ref->apply(sub { $_{$_} += 10 for keys %$_ });
-print "Hash with added values: ", join(", ", map { "$_: ".%{$hash_ref->get}{$_} } sort keys %{$hash_ref->get}), "\n";
+print "Hash with added values: ", join(", ", map { "$_: ".$hash_ref->get->{$_} } sort keys %{$hash_ref->get}), "\n";
 
 my $result = $code_ref->deref->(5);
 print "Code reference result: ", $result, "\n";

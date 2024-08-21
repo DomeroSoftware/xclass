@@ -8,6 +8,8 @@ use Thread::Queue;
 use IO::File;
 use Time::HiRes qw(time);
 use Data::Dumper;
+use Type::Tiny;
+
 
 # Include the directory containing gclass.pm in @INC
 use lib '../lib';
