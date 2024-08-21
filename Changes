@@ -1,5 +1,8 @@
 Changes for gclass package
 
+2.0.0   2024-08-21
+        - added rclass.pm tclass.pm lclass.pm and xclass.pm creatng the main xclass ecosystem end list.
+
 1.3.0   2024-07-24
         - Thread-safe operations on all Perl data types
         - Unified interface for working with glob references
