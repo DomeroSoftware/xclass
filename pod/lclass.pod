@@ -1,421 +1,284 @@
 =head1 NAME
 
-lclass - Advanced Thread-Safe Library and Locking Utility for xclass Ecosystem
+lclass - Locking, Synchronization, and Utility Base Class for the xclass Ecosystem
 
 =head1 SYNOPSIS
 
-use strict;
-use warnings;
+    use xclass;
 
-class MyScalarClass 1.0.0 {
-    use lclass qw(:scalar);  # Import scalar-specific functions inside the class
+    my $scalar_obj = Sc("Hello, World!");
+    $scalar_obj->share_it;
+    $scalar_obj->lock;
+    $scalar_obj->set("New value");
+    $scalar_obj->unlock;
 
-    field $is = 'scalar'; # type identifier for lclass internal handling
-    field $scalar;        # reference container the class is wrapping
+    my $serialized = $scalar_obj->serialize;
+    my $deserialized = Sc()->deserialize($serialized);
 
-    method new($class: $ref, %options) {
-        my $self = bless {}, $class;
-        return $self->try(sub { # we use try in non-lockable methods
-            $self->_init(%options);
-            $self->set($ref); # set our referenced value
-            return $self;
-        }, 'new'); # has a trigger name 'new'
-    }
+    # Using with other xclass types
+    my $array_obj = Ac([1, 2, 3]);
+    my $hash_obj = Hc({key => 'value'});
 
-    method set($self: $value) {
-        return $self->sync(sub { # we use sync in lockable methods
-            ${$scalar} = ${$value};
-        }, 'set', $value); # has a trigger name 'set' with arguments
-    }
+    # Applying functions
+    $array_obj->apply(sub { $_ * 2 });
 
-    method get($self:) {
-        return $self->sync(sub {
-            return ${$scalar};
-        }, 'get');
-    }
-
-    method update($self: $code) {
-        return $self->sync(sub {
-            ${$scalar} = $code->(${$scalar});
-            return $self
-        }, 'update', $scalar);
-    }
-}
-
-# Usage
-my $obj = MyScalarClass->new(\(my $s :shared = "Hello, World!"));
-$obj->set(\"New Value");
-my $value = $obj->get();
-$obj->update(sub { uc $_[0] });
-
-# The lclass functions are used internally by the class methods
+    # Event handling
+    $hash_obj->on('change', sub { print "Hash changed\n" });
 
 =head1 DESCRIPTION
 
-This synopsis demonstrates the core principles of using lclass within the xclass ecosystem:
+The C<lclass> module serves as the foundational base class for the xclass ecosystem, providing essential methods for locking, synchronization, and utility functions. It is designed to be inherited by other specialized classes within the xclass framework, ensuring consistent functionality across the ecosystem.
+
+=head1 METHODS
+
+=head2 Core Methods
 
 =over 4
 
-=item * lclass functions are imported directly into the class, not used with the lclass:: namespace.
+=item B<_ref>
 
-=item * The $is field identifies the type for lclass internal handling.
+Internal method to get the reference of the stored data.
 
-=item * The $scalar field holds the reference that the class is wrapping.
+=item B<_shared>
 
-=item * Non-lockable methods use the C<try> function for error handling.
+Check if the stored reference is shared.
 
-=item * Lockable methods use the C<sync> function for thread-safe operations.
+=item B<share_it>
 
-=item * Both C<try> and C<sync> take a trigger name and optional arguments for event handling.
+Make the object shared for thread-safe operations.
 
-=item * All operations on the wrapped reference use dereferencing (${$scalar}).
+=item B<_init(%options)>
 
-=item * The class methods encapsulate all locking and synchronization, making it transparent to the end user.
+Initialize the object with given options.
 
 =back
 
-This design allows users of xclass to work with shared data structures without directly managing locks or calling lclass functions, while still benefiting from thread-safe operations and event triggering.
-
-The lclass module serves as the foundational library for the entire xclass ecosystem, providing core functionality, utilities, and advanced features for building robust, thread-safe, and feature-rich specialized classes. It offers a comprehensive set of functions for various data types and operations, ensuring consistency and reliability across the xclass framework.
-
-lclass is not an object-oriented class itself, but rather a collection of utility functions used by the various xclass classes (sclass, aclass, hclass, cclass, iclass, rclass, tclass) to handle shared data structures in a thread-safe manner.
-
-=head2 Key Features
+=head2 Locking Mechanisms
 
 =over 4
 
-=item * Thread-safe operations with advanced locking mechanisms
+=item B<lock>
 
-=item * Comprehensive error handling and exception system
+Acquire a lock on the object.
 
-=item * Flexible serialization and deserialization (JSON, YAML, Storable, MessagePack)
+=item B<unlock>
 
-=item * Memory management and optimization utilities
+Release the lock on the object.
 
-=item * Asynchronous operations support (Future, Promise)
+=item B<sync($code, $operation_name, @args)>
 
-=item * Advanced event system for inter-object communication
-
-=item * Profiling and benchmarking capabilities
-
-=item * Caching system with configurable strategies
-
-=item * Plugin system for extensibility
-
-=item * Security features including input sanitization and data encryption
-
-=item * Comprehensive type constraints and validation
+Execute code in a synchronized manner.
 
 =back
 
-=head2 Role in xclass Ecosystem
-
-lclass provides the underlying mechanisms for thread-safety, locking, and shared data management used by all xclass classes. It allows users of xclass to work with shared data structures without directly managing locks, while also providing tools to control locking scope for more complex operations.
-
-=head1 FUNCTIONS
-
-The following functions are typically used internally by the xclass classes and are not intended to be called directly by end-users. They provide the core functionality that enables the thread-safe and feature-rich behavior of the xclass ecosystem.
-
-=head2 Core Thread-Safety Functions
-
-=head3 lock($object)
-
-Acquires a lock on the object for thread-safe operations.
-
-=head3 unlock($object)
-
-Releases the lock on the object.
-
-=head3 sync($object, $code, $operation_name, @args)
-
-Executes the given code block in a thread-safe manner.
-
-Example:
-  $self->sync(sub {
-      ${$scalar} = $new_value;
-  }, 'set', $new_value);
-
-=head2 Error Handling Functions
-
-=head3 throw($message, $code)
-
-Throws an exception with the given message and code.
-
-=head3 warning($message)
-
-Issues a warning with the given message.
-
-=head3 try($object, $code, $operation_name, @args)
-
-Executes the given code block with error handling.
-
-Example:
-  $self->try(sub {
-      $self->_init(%options);
-      $self->set($initial_value);
-  }, 'new');
-
-=head2 Core Utility Functions
-
-=head3 _ref($object)
-
-Internal function to get the reference of the stored data.
-
-=head3 _shared($object)
-
-Checks if the stored reference is shared.
-
-=head3 share($object)
-
-Shares the stored reference if it's not already shared.
-
-=head3 _init($object, %options)
-
-Initializes the object with the given options.
-
-=head3 is_defined($object)
-
-Checks if the stored reference is defined.
-
-=head3 is_empty($object)
-
-Checks if the stored data is empty (context-dependent).
-
-=head3 to_string($object)
-
-Converts the object to a string representation.
-
-=head2 Serialization Functions
-
-=head3 serialize($object, $format)
-
-Serializes the object to the specified format (json, storable, yaml, msgpack).
-
-=head3 deserialize($object, $data, $format)
-
-Deserializes data into the object from the specified format.
-
-=head2 Memory Management Functions
-
-=head3 memory_usage($object)
-
-Returns the memory usage of the object.
-
-=head3 check_circular_refs($object)
-
-Checks for circular references in the object.
-
-=head3 optimize_memory($object)
-
-Attempts to optimize the memory usage of the object.
-
-=head2 Security Functions
-
-=head3 sanitize_input($input)
-
-Sanitizes the given input to prevent security vulnerabilities.
-
-=head3 encrypt_data($data)
-
-Encrypts the given data.
-
-=head3 decrypt_data($encrypted_data)
-
-Decrypts the given encrypted data.
-
-=head2 Asynchronous Operation Functions
-
-=head3 async($object, $operation, @args)
-
-Performs an asynchronous operation.
-
-Example:
-  $self->async(sub {
-      # Perform long-running operation
-      $self->set($result);
-  })->then(sub {
-      print "Operation completed\n";
-  });
-
-=head2 Profiling and Benchmarking Functions
-
-=head3 start_metric($name)
-
-Starts a metric measurement.
-
-=head3 end_metric($name)
-
-Ends a metric measurement.
-
-=head3 get_metrics()
-
-Returns all collected metrics.
-
-=head3 profile($object, $operation)
-
-Profiles the given operation.
-
-=head3 benchmark($object, $operation, $count)
-
-Benchmarks the given operation.
-
-=head2 Caching Functions
-
-=head3 cache($key, $value)
-
-Caches the given value with the specified key.
-
-=head3 clear_cache()
-
-Clears the entire cache.
-
-=head2 Plugin and Event Functions
-
-=head3 register_plugin($name, $plugin)
-
-Registers a new plugin.
-
-=head3 use_plugin($object, $name, @args)
-
-Uses a registered plugin.
-
-Example:
-  $self->register_plugin('MyPlugin', $plugin_object);
-  $self->use_plugin('MyPlugin', @args);
-
-=head3 on($object, $event, $callback)
-
-Registers an event callback.
-
-=head3 trigger($object, $event, @args)
-
-Triggers an event.
-
-Example:
-  $self->on('update', sub {
-      my ($self, $new_value) = @_;
-      print "Value updated to: $new_value\n";
-  });
-  $self->trigger('update', $new_value);
-
-=head3 compare($object, $other, $swap)
-
-Compare objects
-
-=head3 equals($object, $other, $swap)
-
-Compare if objects are equal
-
-=head2 Configuration Functions
-
-=head3 configure(%options)
-
-Configures global settings for lclass.
-
-=head3 version()
-
-Returns the version of lclass.
-
-=head3 check_compatibility($required_version)
-
-Checks compatibility with the given version.
-
-=head2 Type Constraint Functions
-
-=head3 add_type_constraint($type, $constraint)
-
-Adds a type constraint.
-
-=head3 validate($type, $value)
-
-Validates a value against a type constraint.
-
-=head2 Utility Functions
-
-=head3 weak_ref($ref)
-
-Creates a weak reference.
-
-=head3 lint($object)
-
-Performs a lint check on the object.
-
-=head1 EXPORTS
-
-lclass provides several export tags for convenient importing of functions. These exports are typically used by the xclass classes and are not intended to be used directly by end-users.
+=head2 Data Manipulation
 
 =over 4
 
-=item :scalar - Scalar-specific functions
+=item B<apply($func)>
 
-=item :array - Array-specific functions
+Apply a function to the object's data.
 
-=item :hash - Hash-specific functions
+=back
 
-=item :code - Code-specific functions
+=head2 Stringification
 
-=item :io - IO-specific functions
+=over 4
 
-=item :glob - Glob-specific functions
+=item B<to_string>
 
-=item :ref - Reference-specific functions
+Convert the object to a string representation.
 
-=item :thread - Thread-specific functions
+=back
 
-=item :core - Core functionality applicable to all class types
+=head2 Serialization
 
-=item :performance - Performance and profiling functions
+=over 4
 
-=item :meta - Configuration and meta-information functions
+=item B<serialize($format)>
 
-=item :advanced - Advanced features
+Serialize the object to a specified format (default: JSON).
 
-=item :all - All exportable functions
+=item B<deserialize($serialized_data, $format)>
+
+Deserialize data into the object.
+
+=back
+
+=head2 Memory Management
+
+=over 4
+
+=item B<memory_usage>
+
+Get the memory usage of the object.
+
+=item B<check_circular_refs>
+
+Check for circular references in the object.
+
+=back
+
+=head2 Error Handling
+
+=over 4
+
+=item B<throw($message, $code)>
+
+Throw an exception with a message and error code.
+
+=item B<debug($message)>
+
+Log a debug message.
+
+=item B<try($code, $operation_name, @args)>
+
+Execute code in a try-catch block.
+
+=back
+
+=head2 Comparison
+
+=over 4
+
+=item B<compare($other, $swap)>
+
+Compare the object with another object.
+
+=item B<equals($other, $swap)>
+
+Check if the object is equal to another object.
+
+=back
+
+=head2 Event Handling
+
+=over 4
+
+=item B<on($event, $callback)>
+
+Register a callback for an event.
+
+=item B<trigger($event, @args)>
+
+Trigger an event with optional arguments.
+
+=back
+
+=head2 Utility Methods
+
+=over 4
+
+=item B<is_defined>
+
+Check if the object's reference is defined.
+
+=item B<is_empty>
+
+Check if the object's data is empty.
+
+=item B<clone($clone_name)>
+
+Create a clone of the object.
+
+=back
+
+=head2 Configuration and Meta-information
+
+=over 4
+
+=item B<version>
+
+Get the version of lclass.
+
+=item B<check_compatibility($required_version)>
+
+Check if the current version is compatible with a required version.
+
+=item B<configure(%options)>
+
+Configure lclass options.
+
+=back
+
+=head2 Plugin System
+
+=over 4
+
+=item B<register_plugin($name, $plugin)>
+
+Register a plugin for lclass.
+
+=item B<use_plugin($name, @args)>
+
+Use a registered plugin.
+
+=back
+
+=head1 EXPORT
+
+The following functions can be exported:
+
+=over 4
+
+=item :all - Exports all functions
+
+=item :config - Exports configuration-related functions
+
+=item :scalar, :array, :hash, :code, :io, :glob, :ref, :thread - Exports type-specific functions
+
+=item :meta - Exports meta-information functions
+
+=item :advanced - Exports advanced features
 
 =back
 
 =head1 CONFIGURATION
 
-Global configuration can be set using the %CONFIG hash:
+Configuration options can be set using the C<configure> function or by modifying the C<%CONFIG> hash directly:
 
-  $lclass::CONFIG{debug_level} = 2;
-  $lclass::CONFIG{cache_strategy} = 'LRU';
+    lclass::configure(debug_level => 2, use_cache => 1);
 
-=head1 BEST PRACTICES
-
-When using lclass within the xclass ecosystem, consider the following best practices:
+Available options include:
 
 =over 4
 
-=item 1. Always use the appropriate export tag when importing lclass functions into your xclass classes.
+=item debug_level
 
-=item 2. Utilize the C<sync> function for all operations that modify shared data to ensure thread safety.
+=item use_cache
 
-=item 3. Use the C<try> function for error handling in non-lockable methods, especially in constructors.
+=item cache_strategy
 
-=item 4. Leverage the event system (C<on> and C<trigger>) for inter-object communication and to implement observers.
+=item cache_size
 
-=item 5. Use the asynchronous operation functions (C<async> and C<promise>) for long-running operations to avoid blocking.
+=item serialization_format
 
-=item 6. Regularly profile and benchmark your code using the provided functions to identify and optimize performance bottlenecks.
+=item max_recursion_depth
 
-=item 7. Utilize the type constraint system to ensure data integrity and catch errors early.
+=item enable_profiling
+
+=item enable_async
+
+=item security_level
+
+=item encryption_key
 
 =back
 
 =head1 SEE ALSO
 
-L<sclass>, L<aclass>, L<hclass>, L<cclass>, L<iclass>, L<rclass>, L<tclass>, L<xclass>, L<threads>, L<threads::shared>
+L<xclass>, L<sclass>, L<aclass>, L<hclass>, L<cclass>, L<iclass>, L<gclass>, L<rclass>, L<tclass>
 
 =head1 AUTHOR
 
-OnEhIppY, Domero Software <domerosoftware@gmail.com>
+OnEhIppY, Domero Software E<lt>domerosoftware@gmail.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2024 OnEhIppY, Domero Software
+Copyright (C) 2024 by OnEhIppY, Domero Software
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+it under the same terms as Perl itself, either Perl version 5.32.1 or,
+at your option, any later version of Perl 5 you may have available.
 
 =cut

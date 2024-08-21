@@ -88,16 +88,6 @@ It uses configurable compression and flush intervals for fine-tuning performance
 The class is designed to be easily extended with additional IO operations and
 supports custom event triggers for all operations.
 
-=head2 Handling of Circular References
-
-iclass, as part of the xclass ecosystem, incorporates sophisticated handling of circular references for IO operations.
-
-- IO objects wrapped by iclass can safely be part of complex data structures that include other xclass objects.
-- Circular references involving iclass objects, such as in callback systems or event handlers, are automatically detected and managed.
-- The garbage collection process correctly handles iclass objects involved in circular references, ensuring proper resource cleanup.
-- Users can create intricate IO handling systems with interconnected iclass objects without worrying about manual circular reference management.
-- Any circular references created through shared filehandles or IO redirections are handled transparently.
-
 =head1 SYNOPSIS
 
     use strict;
@@ -105,10 +95,10 @@ iclass, as part of the xclass ecosystem, incorporates sophisticated handling of 
     use xclass;
 
     # Create a new iclass object
-    my $io = Ic('MyApp', 'FileIO');
+    my $io = Ic();
 
     # Open a file for writing
-    $io->open('example.txt', 'w');
+    $io->open('example.txt', '>');
 
     # Write to the file
     $io->write("Hello, World!");
@@ -117,7 +107,7 @@ iclass, as part of the xclass ecosystem, incorporates sophisticated handling of 
     $io->close();
 
     # Open a file for reading
-    $io->open('example.txt', 'r');
+    $io->open('example.txt', '<');
 
     # Read from the file
     my $content;
@@ -130,16 +120,17 @@ iclass, as part of the xclass ecosystem, incorporates sophisticated handling of 
 
 =head2 Using Compression
 
-    my $io = Ic('MyApp', 'CompressedIO');
-    $io->open('large_file.txt', 'w');
-    $io->set_compression(6);  # Set compression level
-    $io->write($large_data);
+    my $io = Ic();
+    $io->open('large_file.txt', '>');
+    $io->compression(1);
+    $io->compression_level(6);
+    $io->write("Large amount of data...");
     $io->close();
 
 =head2 Atomic Operations
 
-    my $io = Ic('MyApp', 'AtomicIO');
-    $io->open('important_data.txt', 'r+');
+    my $io = Ic();
+    $io->open('important_data.txt', '+<');
     $io->atomic_operation(sub {
         my $data = $io->getline();
         $data =~ s/old/new/;
@@ -150,102 +141,21 @@ iclass, as part of the xclass ecosystem, incorporates sophisticated handling of 
 
 =head2 Secure File Deletion
 
-    my $io = Ic('MyApp', 'SecureIO');
-    $io->open('sensitive_data.txt', 'r+');
+    my $io = Ic();
+    $io->open('sensitive_data.txt', '+<');
     # ... perform operations ...
     $io->secure_delete();
 
-=head2 Overloading Examples
+=head2 Socket Operations
 
-=head3 Dereference Overloading
-
-    my $io = Ic('MyApp', 'DerefIO');
-    $io->open('file.txt', 'w');
-    my $fh = *$io;  # Get the underlying filehandle
-    print $fh "Direct write\n";
-
-=head3 Stringification Overloading
-
-    my $io = Ic('MyApp', 'StringIO');
-    $io->open('file.txt', 'w');
-    print "IO object: $io\n";  # Prints the stringified representation
-
-=head3 Numeric Context Overloading
-
-    my $io = Ic('MyApp', 'NumericIO');
-    $io->open('file.txt', 'w');
-    my $fileno = 0 + $io;  # Get the file descriptor number
-
-=head3 Boolean Context Overloading
-
-    my $io = Ic('MyApp', 'BoolIO');
-    if ($io) {
-        print "IO handle is open\n";
-    }
-
-=head3 Negation Overloading
-
-    my $io = Ic('MyApp', 'NegationIO');
-    if (!$io) {
-        print "IO handle is not open\n";
-    }
-
-=head3 Assignment Overloading
-
-    my $io1 = Ic('MyApp', 'AssignIO1');
-    my $io2 = Ic('MyApp', 'AssignIO2');
-    $io2 = $io1;  # Assign $io1 to $io2
-
-=head3 Equality Overloading
-
-    my $io1 = Ic('MyApp', 'EqualityIO1');
-    my $io2 = Ic('MyApp', 'EqualityIO2');
-    if ($io1 == $io2) {
-        print "IO handles are equal\n";
-    }
-
-=head3 Comparison Overloading
-
-    my $io1 = Ic('MyApp', 'CompareIO1');
-    my $io2 = Ic('MyApp', 'CompareIO2');
-    if ($io1 cmp $io2) {
-        print "IO handles are different\n";
-    }
-
-=head2 xclass Integration Examples
-
-=head3 Using xclass Factory Method
-
-    my $io = Ic('MyApp', 'FactoryIO');
-    $io->open('xclass_file.txt', 'w');
-    $io->write("xclass integration example");
-    $io->close();
-
-=head3 Interacting with Other xclass Types
-
-    my $array = Ac(['data1', 'data2']);
-    my $io = Ic('MyApp', 'ArrayIO');
-    $io->open('array_data.txt', 'w');
-    $io->write($array->join("\n"));
-    $io->close();
-
-=head2 lclass Utilization Examples
-
-=head3 Using lclass Synchronization
-
-    my $io = Ic('MyApp', 'SyncIO');
-    $io->sync(sub {
-        $io->open('sync_file.txt', 'w');
-        $io->write("Synchronized write");
-        $io->close();
+    my $server = Ic();
+    $server->accept(8080, sub {
+        my ($server, $client) = @_;
+        my $message = "Hello, client!";
+        $client->send(\$message, length($message));
+        $client->close();
     });
-
-=head3 Error Handling with lclass
-
-    my $io = Ic('MyApp', 'ErrorIO');
-    $io->try(sub {
-        $io->open('nonexistent_file.txt', 'r');
-    }, 'open_file');
+    $server->listen();
 
 =head1 METHODS
 
@@ -263,7 +173,7 @@ Creates a new iclass object.
 
 Opens a file with the specified mode.
 
-    $io->open('file.txt', 'w');
+    $io->open('file.txt', '>');
 
 =head3 close()
 
@@ -330,12 +240,6 @@ Checks if the IO handle is open.
         print "IO handle is open\n";
     }
 
-=head3 mode()
-
-Returns the file mode.
-
-    my $mode = $io->mode();
-
 =head2 Advanced Methods
 
 =head3 getline()
@@ -392,11 +296,11 @@ Copies the contents of the file to another file.
 
     $io->copy_to($other_io, 8192);
 
-=head3 create_temp()
+=head3 temporary($mode, @args)
 
 Creates a temporary file.
 
-    my $temp_filename = $io->create_temp();
+    my $temp_filename = $io->temporary();
 
 =head3 secure_delete()
 
@@ -412,11 +316,11 @@ Performs an atomic operation on the file.
         # Atomic operations here
     });
 
-=head3 get_io_type()
+=head3 io_type()
 
 Returns the type of the IO handle.
 
-    my $type = $io->get_io_type();
+    my $type = $io->io_type();
 
 =head3 autoflush($value)
 
@@ -424,91 +328,78 @@ Sets or gets the autoflush setting for the IO handle.
 
     $io->autoflush(1);
 
-=head3 get_permissions()
-
-Gets the file permissions.
-
-    my $perms = $io->get_permissions();
-
-=head3 set_permissions($mode)
+=head3 chmod($mode)
 
 Sets the file permissions.
 
-    $io->set_permissions(0644);
+    $io->chmod(0644);
 
-=head3 get_owner()
+=head3 ismod()
 
-Gets the file owner (UID and GID).
+Gets the file permissions.
 
-    my ($uid, $gid) = $io->get_owner();
+    my $perms = $io->ismod();
 
-=head3 set_owner($uid, $gid)
+=head3 chown($uid, $gid)
 
 Sets the file owner.
 
-    $io->set_owner(1000, 1000);
+    $io->chown(1000, 1000);
+
+=head3 isown()
+
+Gets the file owner (UID and GID).
+
+    my ($uid, $gid) = $io->isown();
 
 =head2 Configuration Methods
 
-=head3 set_buffer_size($size)
+=head3 buffer($size)
 
-Sets the buffer size for IO operations.
+Sets or gets the buffer size for IO operations.
 
-    $io->set_buffer_size(16384);
+    $io->buffer(16384);
 
-=head3 get_buffer_size()
+=head3 encoding($encoding)
 
-Gets the current buffer size.
+Sets or gets the encoding for text operations.
 
-    my $size = $io->get_buffer_size();
+    $io->encoding('utf8');
 
-=head3 set_encoding($encoding)
+=head3 compression($level)
 
-Sets the encoding for text operations.
+Sets or gets the compression setting for IO operations.
 
-    $io->set_encoding('utf8');
+    $io->compression(1);
 
-=head3 get_encoding()
+=head3 compression_level($level)
 
-Gets the current encoding.
+Sets or gets the compression level.
 
-    my $encoding = $io->get_encoding();
+    $io->compression_level(9);
 
-=head3 set_compression($level)
+=head3 flush_interval($interval)
 
-Sets the compression level for IO operations.
+Sets or gets the automatic flush interval.
 
-    $io->set_compression(6);
+    $io->flush_interval(5);  # Flush every 5 seconds
 
-=head3 get_compression()
+=head2 Socket Methods
 
-Gets the current compression setting.
+=head3 accept($port, $callback)
 
-    my $compression = $io->get_compression();
+Sets up a socket to accept connections on the specified port.
 
-=head3 set_compression_level($level)
+    $io->accept(8080, sub {
+        my ($server, $client) = @_;
+        # Handle client connection
+    });
 
-Sets the compression level.
+=head3 listen()
 
-    $io->set_compression_level(9);
+Starts listening for incoming connections on the socket.
 
-=head3 get_compression_level()
-
-Gets the current compression level.
-
-    my $level = $io->get_compression_level();
-
-=head3 set_flush_interval($interval)
-
-Sets the automatic flush interval.
-
-    $io->set_flush_interval(5);  # Flush every 5 seconds
-
-=head3 get_flush_interval()
-
-Gets the current flush interval.
-
-    my $interval = $io->get_flush_interval();
+    $io->listen();
 
 =head1 OVERLOADED OPERATORS
 
@@ -560,7 +451,7 @@ iclass inherits its configuration options from xclass. Specific options for icla
 
 =item * buffer_size: Size of the buffer for IO operations (default: 8192 bytes).
 
-=item * encoding: Default encoding for text operations (default: 'utf8').
+=item * encoding: Default encoding for text operations (default: 'raw').
 
 =item * compression: Whether compression is enabled (default: 0).
 
@@ -606,6 +497,14 @@ This module requires the following Perl modules:
 
 =item * Fcntl
 
+=item * POSIX
+
+=item * File::Spec
+
+=item * Cwd
+
+=item * Config
+
 =item * Encode
 
 =item * Compress::Zlib
@@ -613,6 +512,8 @@ This module requires the following Perl modules:
 =item * File::Temp
 
 =item * Time::HiRes
+
+=item * Socket
 
 =item * xclass (for handling specific reference types and core functionality)
 
