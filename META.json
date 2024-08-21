@@ -1,68 +1,77 @@
 {
-   "abstract" : "Thread-safe glob reference manipulation",
-   "author" : [
-      "OnEhIppY @ Domero Software <somerosoftware@gmail.com>"
-   ],
-   "dynamic_config" : 0,
-   "generated_by" : "ExtUtils::MakeMaker version 7.44, CPAN::Meta::Converter version 2.150010",
-   "license" : [
-      "artistic_2"
-   ],
-   "meta-spec" : {
-      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
-      "version" : 2
-   },
-   "name" : "gclass",
-   "no_index" : {
-      "directory" : [
-         "t",
-         "inc"
-      ]
-   },
-   "prereqs" : {
-      "build" : {
-         "requires" : {
-            "ExtUtils::MakeMaker" : "0"
-         }
-      },
-      "configure" : {
-         "requires" : {
-            "ExtUtils::MakeMaker" : "0"
-         }
-      },
-      "runtime" : {
-         "requires" : {
-            "Carp" : "0",
-            "JSON" : "0",
-            "Scalar::Util" : "0",
-            "Storable" : "0",
-            "Thread::Queue" : "0",
-            "Type::Tiny" : "0",
-            "YAML" : "0",
-            "perl" : "5.010",
-            "threads" : "0",
-            "threads::shared" : "0"
-         }
-      },
-      "test" : {
-         "requires" : {
-            "Test::Deep" : "0",
-            "Test::Exception" : "0",
-            "Test::More" : "0"
-         }
+  "name": "xclass",
+  "version": "2.0.0",
+  "abstract": "Core Management and Factory Class for the xclass Ecosystem",
+  "author": [
+    "OnEhIppY @ DomeroSoftware <domerosoftware@gmail.com>"
+  ],
+  "license": [
+    "perl_5"
+  ],
+  "dynamic_config": 1,
+  "prereqs": {
+    "configure": {
+      "requires": {
+        "ExtUtils::MakeMaker": "0"
       }
-   },
-   "release_status" : "stable",
-   "resources" : {
-      "bugtracker" : {
-         "web" : "https://github.com/DomeroSoftware/gclass/issues"
-      },
-      "repository" : {
-         "type" : "git",
-         "url" : "https://github.com/DomeroSoftware/gclass.git",
-         "web" : "https://github.com/DomeroSoftware/gclass"
+    },
+    "build": {
+      "requires": {
+        "ExtUtils::MakeMaker": "0"
       }
-   },
-   "version" : "1.00",
-   "x_serialization_backend" : "JSON::PP version 4.06"
+    },
+    "test": {
+      "requires": {
+        "Test::More": "0",
+        "Test::MemoryGrowth": "0",
+        "Test::Exception": "0",
+        "Test::Warn": "0"
+      }
+    },
+    "runtime": {
+      "requires": {
+        "perl": "5.010",
+        "threads": "0",
+        "threads::shared": "0",
+        "Thread::Semaphore": "0",
+        "Thread::Queue": "0",
+        "Scalar::Util": "0",
+        "List::Util": "0",
+        "Time::HiRes": "0",
+        "Type::Tiny": "0",
+        "Try::Tiny": "0",
+        "JSON::XS": "0",
+        "YAML::XS": "0",
+        "Storable": "0",
+        "IO::Handle": "0",
+        "Fcntl": "0",
+        "Encode": "0",
+        "Compress::Zlib": "0",
+        "File::Temp": "0",
+        "Socket": "0",
+        "Data::MessagePack": "0",
+        "B::Deparse": "0",
+        "Devel::Size": "0",
+        "Devel::Cycle": "0",
+        "Benchmark": "0",
+        "Log::Log4perl": "0"
+      }
+    }
+  },
+  "resources": {
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/DomeroSoftware/xclass.git",
+      "web": "https://github.com/DomeroSoftware/xclass"
+    },
+    "bugtracker": {
+      "web": "https://github.com/DomeroSoftware/xclass/issues"
+    }
+  },
+  "meta-spec": {
+    "version": "2",
+    "url": "http://search.cpan.org/perldoc?CPAN::Meta::Spec"
+  },
+  "generated_by": "Hand-crafted based on Makefile.PL",
+  "release_status": "stable"
 }
