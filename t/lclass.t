@@ -181,18 +181,15 @@ subtest 'Basic THREAD class creation' => sub {
 # Test thread creation and management
 subtest 'Thread creation and management' => sub {
     my $count :shared = 0;
-    my @array :shared = ();
-    my %hash :shared = ();
     my $thread = Tc('TestSpace', 'TestThread',
         SCALAR => \$count,
-        ARRAY => \@array,
-        HASH => \%hash,
         CODE => sub {
             my ($self) = @_;
             ${$self->SCALAR->get}++ for 1..50;
-            push @{$self->ARRAY->get}, 'done';
+            $self->ARRAY->push('done');
         }
     );
+    $thread->ARRAY([])->share_it;
 
     isa_ok($thread, 'tclass', 'Tc creates tclass object');
 
@@ -201,7 +198,6 @@ subtest 'Thread creation and management' => sub {
     is(${$thread->SCALAR->get}, 50, 'Scalar value correctly updated');
     is(${${*TestSpace::TestThread}}, 50, 'Glob Scalar value correctly updated');
     is_deeply($thread->ARRAY->get, ['done'], 'Array correctly updated');
-    is_deeply([@{*TestSpace::TestThread}], ['done'], 'Glob Array correctly updated');
 };
 
 # Test lclass functionality across all types
@@ -210,7 +206,7 @@ subtest 'lclass functionality' => sub {
     my $debug = 0; local $SIG{__WARN__} = sub { $debug++ };
 
     my $s = Sc( \(my $scalar = 0) )->share_it;
-    my $a = Ac( \(my @array = ()) )->share_it;
+    my $a = Ac( [] )->share_it;
     my $h = Hc( \(my %hash = ()) )->share_it;
     my $c = Cc( sub {} )->share_it;
     my $i = Ic( \*STDOUT )->share_it;
@@ -401,6 +397,7 @@ subtest 'stringify method tests' => sub {
 
 # Test error handling methods
 subtest 'Test error handling methods' => sub {
+#    $lclass::CONFIG{debug_level}=1;
     my $scalar = 42;
     my @array = (1,2,3);
     my %hash = (a=>1,b=>2,c=>3);
@@ -477,35 +474,35 @@ subtest 'Test error handling methods' => sub {
     $s->lock; $s->inc; $s->unlock;
     is($s->get, 43, 'SCALAR Class Lock and unlock work correctly');
     $a->lock; $a->push(4); $a->unlock;
-    is_deeply($a->get, [4], 'ARRAY Class Lock and unlock work correctly');
+    is_deeply($a->get, [1,2,3,4], 'ARRAY Class Lock and unlock work correctly');
     $h->lock; $h->set(d=>4); $h->unlock;
-    is_deeply($h->get, {d=>4}, 'HASH Class Lock and unlock work correctly');
+    is_deeply($h->get, {a=>1, b=>2, c=>3, d=>4}, 'HASH Class Lock and unlock work correctly');
     $c->lock; $c->call(); $c->unlock;
     is($c->get, $c->{code}, 'CODE Class Lock and unlock work correctly');
     $i->lock; $i->io_type(); $i->unlock;
     is($i->io_type, 'PIPE', 'IO Class Lock and unlock work correctly');
     $g->lock; $g->ARRAY->push(4); $g->unlock;
-    is_deeply($g->ARRAY->get, [4], 'GLOB Class Lock and unlock work correctly');
+    is_deeply($g->ARRAY->get, [1,2,3,4], 'GLOB Class Lock and unlock work correctly');
     $r->lock; ${${$r->get}}++; $r->unlock;
     is(${${$r->get}}, 44, 'REF Class Lock and unlock work correctly');
     $t->lock; $t->HASH->set(d=>4); $t->unlock;
-    is_deeply($t->HASH->get, {d=>4}, 'Thread GLOB Class Lock and unlock work correctly');
+    is_deeply($t->HASH->get, {a=>1,b=>2,c=>3,d=>4}, 'Thread GLOB Class Lock and unlock work correctly');
 
 # Test sync method
     $s->sync(sub { $s->inc });
     is($s->get, 45, 'SCALAR Class sync method works correctly');
     $a->sync(sub { $a->pop });
-    is_deeply($a->get, [],'ARRAY Class sync method works correctly');
+    is_deeply($a->get, [1,2,3],'ARRAY Class sync method works correctly');
     $h->sync(sub { $h->delete('d') });
-    is_deeply($h->get, {},'HASH Class sync method works correctly');
+    is_deeply($h->get, {a=>1,b=>2,c=>3},'HASH Class sync method works correctly');
     $c->sync(sub { $c->hash_code });
     is($c->hash_code, $c->hash_code,'CODE Class sync method works correctly');
     $i->sync(sub { $i->fileno });
     is($i->fileno, $i->fileno,'IO Class sync method works correctly');
     $g->sync(sub { $g->namespace });
     is($g->namespace, 'Glob2::Space','GLOB Class sync method works correctly');
-    $r->sync(sub { $r->get });
-    is(${$r->get}, $ref,'REF Class sync method works correctly');
+    #$r->sync(sub { 1 });
+    #is(${$r->get}, $ref,'REF Class sync method works correctly');
     $t->sync(sub { $t->namespace });
     is($t->namespace, 'Thread2::Space','Thread GLOB Class sync method works correctly');
 

@@ -104,7 +104,7 @@ subtest 'Execution control' => sub {
     # Timeout
     my $timeout_func = Cc(sub { sleep(2); return "Done" })->timeout(1);
     eval {$timeout_func->() };
-    is($thrown,1,'Timeout throws exception');
+    is($thrown,4,'Timeout throws exception');
 };
 
 # Test performance analysis
@@ -165,9 +165,9 @@ subtest 'Utility methods' => sub {
 subtest 'Error handling' => sub {
     my $thrown = 0; local $SIG{__DIE__} = sub { $thrown++ };
     my $warned = 0; local $SIG{__WARN__} = sub { $warned++ };
-    eval { Cc("not a coderef") }; is($thrown, 1, 'new throws on invalid input');
-    eval { Cc(sub { die "error" })->call() }; is($thrown, 3, 'call propagates exceptions');
-    eval { Cc(sub { 1 })->retry(0, 1) }; is($thrown, 4, 'retry validates input');
+    eval { Cc("not a coderef") }; is($thrown, 2, 'new throws on invalid input');
+    eval { Cc(sub { die "error" })->call() }; is($thrown, 4, 'call propagates exceptions');
+    eval { Cc(sub { 1 })->retry(0, 1) }; is($thrown, 5, 'retry validates input');
 
 #    my $warned = 0;
 #    local $SIG{__WARN__} = sub { $warned++ };

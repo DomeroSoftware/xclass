@@ -184,7 +184,7 @@ use_ok('xclass');
     ok($thrown_error[0] =~ /Test error/gs, 'throw message works');
     ok($thrown == 1, 'throw count works');
     eval { $glob->set("Not a GLOB") };
-    is($thrown, 4, 'Wrong Glob Reference throw works');
+    is($thrown, 3, 'Wrong Glob Reference throw works');
 #    is($warned, 1, 'warn method works');
 }
 

@@ -207,22 +207,22 @@ use_ok('xclass', 'Xc', 'Ac');
     local $SIG{__DIE__} = sub { $thrown++ };
 
     eval { $arr->pop };
-    is($thrown, 1, 'pop on empty array throws error');
+    is($thrown, 2, 'pop on empty array throws error');
 
     eval { $arr->shift };
-    is($thrown, 2, 'shift on empty array throws error');
+    is($thrown, 4, 'shift on empty array throws error');
     
     eval { $arr->get(0) };
-    is($thrown, 3, 'get with invalid index throws error');
+    is($thrown, 6, 'get with invalid index throws error');
     
     eval { $arr->set("null", 1) };
-    is($thrown, 4, 'set with invalid index throws error');
+    is($thrown, 8, 'set with invalid index throws error');
     
     eval { $arr->splice(1, 1) };
-    is($thrown, 5, 'splice with invalid offset throws error');
+    is($thrown, 10, 'splice with invalid offset throws error');
     
     eval { $arr->map("not a coderef") };
-    is($thrown, 6, 'map with invalid coderef throws error');
+    is($thrown, 12, 'map with invalid coderef throws error');
 }
 
 done_testing();

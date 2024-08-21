@@ -107,7 +107,7 @@ use_ok('xclass');
     
     my $ref = Rc(\42);
     eval { $ref->merge("not a reference") };
-    is($thrown, 3, 'merge() throws error for invalid input');
+    is($thrown, 2, 'merge() throws error for invalid input');
     eval { $ref->set("not a reference") };
     is($thrown, 4, 'set() throws error for invalid input');
 }

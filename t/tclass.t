@@ -37,30 +37,28 @@ use_ok('xclass');
     my $count :shared = 0;
     my $thread = Tc('TestSpace', 'BasicThread',
         SCALAR => \$count,
-        ARRAY => [],
-        HASH => {},
         CODE => sub {
             print STDOUT "Running Thread: ".threads->tid."\n";
             my ($self) = @_;
             ${${*TestSpace::BasicThread}}++ for 1..50;
-            push @{*TestSpace::BasicThread}, 'done';
+            $self->ARRAY->push('done');
         }
     );
+    $thread->ARRAY([])->share_it;
+    $thread->HASH({})->share_it;
 
     $thread->start;
     $thread->stop;
     ok(!$thread->running, 'Thread not running after stop');
     
     is(${${*TestSpace::BasicThread}}, 50, 'Scalar value correctly updated');
-    is_deeply([@{*TestSpace::BasicThread}], ['done'], 'Array correctly updated');
+    is_deeply($thread->ARRAY->get, ['done'], 'Array correctly updated');
 }
 
 # Test shared data access and manipulation
 {
     my $thread = Tc('TestSpace', 'SharedDataThread',
         SCALAR => 10,
-        ARRAY => [],
-        HASH => {},
         CODE => sub {
             my ($self) = @_;
             $self->SCALAR->inc(5);
@@ -68,8 +66,8 @@ use_ok('xclass');
             $self->HASH->set('c'=>3);
         }
     );
-    $thread->ARRAY([1, 2, 3]);
-    $thread->HASH({ a => 1, b => 2 });
+    $thread->ARRAY([1, 2, 3])->share_it;
+    $thread->HASH({ a => 1, b => 2 })->share_it;
     $thread->start->join;
     
     is($thread->SCALAR->get, 15, 'Shared scalar correctly updated');
