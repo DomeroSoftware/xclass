@@ -51,7 +51,7 @@ Key points:
 
 # SYNOPSIS
 
-'''perl
+```perl
 use xclass;
 
 # Create instances of specialized classes
@@ -67,13 +67,13 @@ xclass::configure(lazy_loading => 0, cache_instances => 1);
 
 # Set debug level
 xclass::set_debug_level(2);
-'''
+```
 
 # EXAMPLES
 
 ## Basic Usage
 
-'''perl
+```perl
 use xclass;
 
 # Create a scalar object
@@ -90,11 +90,11 @@ my $hash = Hc({ name => "Alice", age => 30 });
 $hash->set("city", "New York");
 print $hash->get("name"), " lives in ", $hash->get("city"), "\n";
 # Outputs: Alice lives in New York
-'''
+```
 
 ## Automatic Type Conversion
 
-'''perl
+```perl
 use xclass;
 
 sub process_data {
@@ -113,11 +113,11 @@ sub process_data {
 process_data("Hello");  # Outputs: Processing scalar: Hello
 process_data([1, 2, 3]);  # Outputs: Processing array: 1, 2, 3
 process_data({ a => 1, b => 2 });  # Outputs: Processing hash: a, b
-'''
+```
 
 ## Thread-Safe Operations
 
-'''perl
+```perl
 use xclass;
 use threads;
 
@@ -136,11 +136,11 @@ $_->join for @threads;
 
 print "Final array: ", $shared_array->join(", "), "\n";
 # Outputs a thread-safe, combined result of all threads
-'''
+```
 
 ## Using Code References
 
-'''perl
+```perl
 use xclass;
 
 my $code = Cc(sub { my $x = shift; return $x * 2 });
@@ -149,40 +149,40 @@ print $code->call(5), "\n";  # Outputs: 10
 
 $code->modify(sub { my $original = shift; sub { $original->(@_) + 1 } });
 print $code->call(5), "\n";  # Outputs: 11
-'''
+```
 
 ## IO Operations
 
-'''perl
+```perl
 use xclass;
 
 my $file = Ic("example.txt");
 $file->write("Hello, xclass!");
 my $content = $file->read;
 print $content, "\n";  # Outputs: Hello, xclass!
-'''
+```
 
 ## GLOB Handling
 
-'''perl
+```perl
 use xclass;
 
 my $glob = Gc(\*STDOUT);
 $glob->print("This goes to STDOUT\n");
-'''
+```
 
 ## General Reference Manipulation
 
-'''perl
+```perl
 use xclass;
 
 my $ref = Rc(\[1, 2, 3]);
 print $ref->deref->[1], "\n";  # Outputs: 2
-'''
+```
 
 ## Thread Management
 
-'''perl
+```perl
 use xclass;
 
 my $thread = Tc->new('MyApp', 'WorkerThread',
@@ -198,7 +198,7 @@ my $thread = Tc->new('MyApp', 'WorkerThread',
 $thread->start;
 sleep 5;
 $thread->stop;
-'''
+```
 
 # METHODS
 
@@ -208,27 +208,27 @@ $thread->stop;
 
 Registers a new class in the xclass ecosystem.
 
-'''perl
+```perl
 xclass::register('CUSTOM', 'MyCustomClass');
-'''
+```
 
 ### registered($type)
 
 Checks if a type is registered.
 
-'''perl
+```perl
 if (xclass::registered('SCALAR')) {
     print "SCALAR type is registered\n";
 }
-'''
+```
 
 ### class($type)
 
 Returns the class name for a given type.
 
-'''perl
+```perl
 my $class_name = xclass::class('ARRAY');
-'''
+```
 
 ## Instance Creation
 
@@ -236,27 +236,27 @@ my $class_name = xclass::class('ARRAY');
 
 Creates an instance of the specified type.
 
-'''perl
+```perl
 my $array = xclass::create('ARRAY', [1, 2, 3]);
-'''
+```
 
 ### Sc(@args), Ac(@args), Hc(@args), Cc(@args), Ic(@args), Gc(@args), Rc(@args), Tc(@args)
 
 Shorthand methods for creating instances of specific types.
 
-'''perl
+```perl
 my $scalar = Sc("Hello");
 my $array = Ac([1, 2, 3]);
 my $hash = Hc({ key => 'value' });
-'''
+```
 
 ### Xc($element, @args)
 
 Automatically converts an element to the appropriate xclass type.
 
-'''perl
+```perl
 my $xobject = Xc($some_data);
-'''
+```
 
 ## Configuration and Debugging
 
@@ -264,38 +264,38 @@ my $xobject = Xc($some_data);
 
 Configures the xclass ecosystem.
 
-'''perl
+```perl
 xclass::configure(lazy_loading => 0, cache_instances => 1);
-'''
+```
 
 ### set_debug_level($level)
 
 Sets the debug level for the ecosystem.
 
-'''perl
+```perl
 xclass::set_debug_level(2);
-'''
+```
 
 ### debug_log($message, $level, $category)
 
 Logs a debug message.
 
-'''perl
+```perl
 xclass::debug_log("Processing data", 2, 'DATA');
-'''
+```
 
 # ERROR HANDLING
 
 xclass uses a centralized error handling mechanism. Errors are thrown as exceptions and can be caught using eval or try-catch constructs.
 
-'''perl
+```perl
 eval {
     my $array = Ac("not an array");
 };
 if ($@) {
     print "Error: $@\n";
 }
-'''
+```
 
 # LIMITATIONS AND CAVEATS
 
@@ -310,9 +310,9 @@ Configuration options can be set using the configure() method:
 - lazy_loading: Enable/disable lazy loading of classes (default: 1)
 - cache_instances: Enable/disable instance caching (default: 0)
 
-'''perl
+```perl
 xclass::configure(lazy_loading => 0, cache_instances => 1);
-'''
+```
 
 # PERFORMANCE CONSIDERATIONS
 
