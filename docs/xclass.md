@@ -185,7 +185,7 @@ print $ref->deref->[1], "\n";  # Outputs: 2
 ```perl
 use xclass;
 
-my $thread = Tc->new('MyApp', 'WorkerThread',
+my $thread = Tc('MyApp', 'WorkerThread',
     code => sub {
         my ($self) = @_;
         while (!$self->should_stop) {
