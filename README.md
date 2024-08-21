@@ -48,15 +48,16 @@ The xclass ecosystem is a comprehensive, thread-safe Perl module suite designed 
 
 ## Modules
 
-- [xclass](docs/xclass.md): Main package to include for complete xclass ecosystem access
-- [tclass](docs/tclass.md): Thread control operations
-- [gclass](docs/gclass.md): Thread-safe glob operations
-- [sclass](docs/sclass.md): Thread-safe scalar operations
-- [aclass](docs/aclass.md): Thread-safe array operations
-- [hclass](docs/hclass.md): Thread-safe hash operations
-- [cclass](docs/cclass.md): Thread-safe code reference operations
-- [iclass](docs/iclass.md): Thread-safe I/O operations
-- [lclass](docs/lclass.md): Locking mechanism for thread safety and general type/role class utilities exporter
+- [`xclass`](docs/xclass.md): Main package to include for complete xclass ecosystem access
+- [`lclass`](docs/lclass.md): Lock Class - Thread-safe operations, synchronization and Utilities
+- [`sclass`](docs/sclass.md): Scalar Class - Advanced scalar value manipulation
+- [`aclass`](docs/aclass.md): Array Class - Enhanced array handling and operations
+- [`hclass`](docs/hclass.md): Hash Class - Advanced hash manipulation and features
+- [`iclass`](docs/iclass.md): IO Class - Input/Output operations and file handling
+- [`cclass`](docs/cclass.md): Code Class - Subroutine and code reference management
+- [`gclass`](docs/gclass.md): GLOB Class - Advanced GLOB reference manipulation
+- [`rclass`](docs/rclass.md): Reference Class - Generic reference type handling
+- [`tclass`](docs/tclass.md): Thread Class - Advanced thread control and management
 
 ## Installation
 
