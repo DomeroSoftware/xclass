@@ -553,7 +553,17 @@ This documentation refers to cclass version 2.0.0.
 
 # SEE ALSO
 
-xclass, lclass
+- [`xclass`](xclass.md): eXtended Class - Core of the xclass ecosystem
+- [`lclass`](lclass.md): Lock Class - Thread-safe operations, synchronization and Utilities
+- [`sclass`](sclass.md): Scalar Class - Advanced scalar value manipulation
+- [`aclass`](aclass.md): Array Class - Enhanced array handling and operations
+- [`hclass`](hclass.md): Hash Class - Advanced hash manipulation and features
+- [`iclass`](iclass.md): IO Class - Input/Output operations and file handling
+- [`gclass`](gclass.md): GLOB Class - Advanced GLOB reference manipulation
+- [`rclass`](rclass.md): Reference Class - Generic reference type handling
+- [`tclass`](tclass.md): Thread Class - Advanced thread control and management
+
+For more information, please refer to the full documentation by running `perldoc cclass` after installation.
 
 # AUTHOR
 
@@ -565,18 +575,3 @@ Copyright (C) 2024 OnEhIppY, Domero Software
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
-
-# See Also
-
-- [`xclass`](xclass.md): eXtended Class - Core of the xclass ecosystem
-- [`lclass`](lclass.md): Lock Class - Thread-safe operations, synchronization and Utilities
-- [`sclass`](sclass.md): Scalar Class - Advanced scalar value manipulation
-- [`aclass`](aclass.md): Array Class - Enhanced array handling and operations
-- [`hclass`](hclass.md): Hash Class - Advanced hash manipulation and features
-- [`iclass`](iclass.md): IO Class - Input/Output operations and file handling
-- [`gclass`](gclass.md): GLOB Class - Advanced GLOB reference manipulation
-- [`rclass`](rclass.md): Reference Class - Generic reference type handling
-- [`tclass`](tclass.md): Thread Class - Advanced thread control and management
-
-
-For more information, please refer to the full documentation by running `perldoc cclass` after installation.

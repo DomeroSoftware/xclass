@@ -520,17 +520,6 @@ Version 2.0.0
 
 This documentation refers to aclass version 2.0.0.
 
-# AUTHOR
-
-OnEhIppY, Domero Software <domerosoftware@gmail.com>
-
-# COPYRIGHT AND LICENSE
-
-Copyright (C) 2024 OnEhIppY, Domero Software
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
-
 # See Also
 
 - [`xclass`](xclass.md): eXtended Class - Core of the xclass ecosystem
@@ -542,4 +531,15 @@ it under the same terms as Perl itself.
 - [`gclass`](gclass.md): GLOB Class - Advanced GLOB reference manipulation
 - [`rclass`](rclass.md): Reference Class - Generic reference type handling
 - [`tclass`](tclass.md): Thread Class - Advanced thread control and management
+
+# AUTHOR
+
+OnEhIppY, Domero Software <domerosoftware@gmail.com>
+
+# COPYRIGHT AND LICENSE
+
+Copyright (C) 2024 OnEhIppY, Domero Software
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
 

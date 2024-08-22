@@ -486,10 +486,6 @@ This documentation refers to gclass version 2.0.0.
 - [`rclass`](rclass.md): Reference Class - Generic reference type handling
 - [`tclass`](tclass.md): Thread Class - Advanced thread control and management
 
-## See Also
-
-xclass, lclass, hclass, aclass, sclass, cclass, iclass, rclass, tclass
-
 ## Author
 
 OnEhIppY, Domero Software <domerosoftware@gmail.com>
